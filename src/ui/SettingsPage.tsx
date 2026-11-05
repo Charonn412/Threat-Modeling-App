@@ -78,7 +78,7 @@ export function SettingsPage() {
         <h2>Framework catalogs</h2>
         <p className="small muted">
           MITRE ATLAS and ATT&CK are generated from MITRE's official data (scripts/extract_frameworks.py). OWASP lists and STRIDE are maintained in the app. This assessment records the
-          versions it was assessed against. In-app editing and importing of libraries comes in a later build.
+          versions it was assessed against. Edit or import catalogs under Libraries (📚).
         </p>
         <table className="table">
           <thead>

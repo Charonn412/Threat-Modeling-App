@@ -28,7 +28,7 @@ const ATTACK: Catalog = {
   items: attackData.items as CatalogItem[],
 };
 
-export const CATALOGS: Catalog[] = [
+export const BUILTIN_CATALOGS: Catalog[] = [
   OWASP_CATALOGS[0], // LLM
   OWASP_CATALOGS[1], // Agentic
   OWASP_CATALOGS[2], // ML
@@ -38,8 +38,16 @@ export const CATALOGS: Catalog[] = [
   ...OWASP_CATALOGS.slice(3), // Top 10, API, NHI, CI/CD, K8s
 ];
 
-const BY_ID = new Map(CATALOGS.map((c) => [c.id, c]));
-const ITEM_INDEX = new Map(CATALOGS.map((c) => [c.id, new Map(c.items.map((i) => [i.id, i]))]));
+// Live binding: replaced when library edits are applied (see registry.ts).
+export let CATALOGS: Catalog[] = BUILTIN_CATALOGS;
+let BY_ID = new Map(CATALOGS.map((c) => [c.id, c]));
+let ITEM_INDEX = new Map(CATALOGS.map((c) => [c.id, new Map(c.items.map((i) => [i.id, i]))]));
+
+export function _setCatalogs(next: Catalog[]) {
+  CATALOGS = next;
+  BY_ID = new Map(next.map((c) => [c.id, c]));
+  ITEM_INDEX = new Map(next.map((c) => [c.id, new Map(c.items.map((i) => [i.id, i]))]));
+}
 
 export const getCatalog = (id: string) => BY_ID.get(id);
 

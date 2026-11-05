@@ -4,7 +4,6 @@ import { RuleBasedAnalyzer, applySuggestions, type Suggestion } from '../logic/d
 import { newAssessment } from '../model/factory';
 import { useStore } from '../state/store';
 
-const analyzer = new RuleBasedAnalyzer();
 
 const EXAMPLE =
   'An internal HR assistant for employees. Users chat in Microsoft Teams and sign in with Okta SSO. ' +
@@ -24,7 +23,8 @@ export function DescribePanel({ mode, onDone }: { mode: 'new' | 'existing'; onDo
   const [autoWire, setAutoWire] = useState(true);
 
   const analyze = () => {
-    const s = analyzer.analyze(text);
+    // Built per run so in-app lexicon edits take effect immediately.
+    const s = new RuleBasedAnalyzer().analyze(text);
     setSuggestions(s);
     setAccepted(new Set(s.filter((x) => x.confidence !== 'low').map((x) => x.id)));
   };

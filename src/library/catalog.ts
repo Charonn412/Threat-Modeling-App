@@ -34,7 +34,8 @@ export const CATEGORY_ORDER: Category[] = [
   'effects',
 ];
 
-export const COMPONENT_TYPES: ComponentType[] = [
+/** Built-in component catalog. The active catalog (with library edits applied) is COMPONENT_TYPES. */
+export const BUILTIN_COMPONENT_TYPES: ComponentType[] = [
   // Actors (Section 7)
   { id: 'end_user', label: 'End user', category: 'actors', areas: [], plane: 'data', glyph: '👤', description: 'Employee, customer, partner or public user.' },
   { id: 'admin_user', label: 'Administrator / operator', category: 'actors', areas: ['B13'], plane: 'control', glyph: '🛠', description: 'Configures, deploys or operates the system.' },
@@ -94,7 +95,14 @@ export const COMPONENT_TYPES: ComponentType[] = [
   { id: 'downstream_action', label: 'Downstream effect', category: 'effects', areas: ['B16'], plane: 'data', glyph: '🎯', description: 'Record change, payment, message, access change.' },
 ];
 
-const BY_ID = new Map(COMPONENT_TYPES.map((t) => [t.id, t]));
+// Live binding: replaced when library edits are applied (see registry.ts).
+export let COMPONENT_TYPES: ComponentType[] = BUILTIN_COMPONENT_TYPES;
+let BY_ID = new Map(COMPONENT_TYPES.map((t) => [t.id, t]));
+
+export function _setComponentTypes(next: ComponentType[]) {
+  COMPONENT_TYPES = next;
+  BY_ID = new Map(next.map((t) => [t.id, t]));
+}
 
 export function getComponentType(id: string): ComponentType {
   const t = BY_ID.get(id);

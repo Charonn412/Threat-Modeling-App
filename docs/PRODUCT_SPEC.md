@@ -12,7 +12,10 @@ Source methodology: *Enterprise AI Security — Threat Modeling Methodology & Ar
 | AI assist | **No LLM in v1.** "Describe your system" uses rule-based keyword and phrase matching behind a `DescriptionAnalyzer` interface, so an LLM can be added later. |
 | v1 scope | Stages 1–6: intake → architecture discovery → diagram → security objectives → threats → risk rating → treatments and patterns. Evidence tracker (App. G), sign-off (App. H) and reassessment triggers are deferred. |
 | Diagram | Editable canvas with **two-way sync** to the model and questionnaire. One canvas with toggleable layers. |
-| Threat frameworks | Appendix C domains, tagged with **OWASP Top 10 for LLM Apps**, **OWASP Agentic AI threats**, **MITRE ATLAS** and **STRIDE**. |
+| Threat frameworks | Appendix C domains, tagged with the latest **OWASP** lists (AI and traditional), **MITRE ATLAS**, **MITRE ATT&CK** and **STRIDE**. See section 4a. |
+| Traditional security | **Built in everywhere**, not a separate module. Every component carries conventional AppSec, cloud and infrastructure questions and threat rules alongside its AI-specific ones. |
+| Content editing | Question bank, component catalog, threat rules, patterns, framework mappings and the description lexicon are **all editable inside the app** (Settings → Libraries). |
+| Report branding | None required. A plain, clean report. |
 | Question depth | **Tiered by risk** (Light / Standard / Deep) from intake answers. The user can always expand. |
 | Risk rating | Section 9 matrix by default; **configurable** in Settings to match the organization's approved matrix. |
 | Starting points | Blank, starter template, or free-text description. |
@@ -84,6 +87,35 @@ Shipped as versioned JSON/TS data files so they can be edited without touching U
 - **Description lexicon** — maps keywords, phrases and product names to suggested components, attributes and answers.
   - Example: "Bedrock" → model_endpoint (provider AWS); "Slack" → tool_connector (messaging); "runs Python" → code_execution.
 
+## 4a. Framework catalogs
+
+Each framework is its own versioned catalog. Each assessment records the catalog versions it was assessed against, so reports stay reproducible after catalogs are updated.
+
+| Framework | Version at spec time | Applies to |
+|---|---|---|
+| OWASP Top 10 for LLM Applications | 2026 edition, if published; otherwise 2025 (verify on genai.owasp.org) | GenAI, RAG and agent components |
+| OWASP Top 10 for Agentic Applications | 2026 (ASI01–ASI10) | Agents, tools, memory, delegation |
+| OWASP Machine Learning Security Top 10 | 2023 (latest) | Traditional ML, training pipeline |
+| OWASP Top 10 (web applications) | 2025 (A01–A10) | UI, backend, all app components |
+| OWASP API Security Top 10 | 2023 (latest) | APIs, gateways, tool connectors |
+| OWASP Non-Human Identities Top 10 | 2025 | Service accounts, agent and tool identities, secrets |
+| OWASP Top 10 CI/CD Security Risks | latest | Model and app deployment pipelines |
+| OWASP Kubernetes Top 10 | latest | Container hosting |
+| OWASP ASVS | 5.0 | Verification requirements, mapped to controls and patterns |
+| MITRE ATLAS | v2026.09 | AI-specific tactics and techniques |
+| MITRE ATT&CK (Enterprise) | v20 (Oct 2026), including the v19 split of Defense Evasion into Stealth and Defense Impairment | Conventional attack paths on every component: identity, cloud, network, supply chain, lateral movement |
+| STRIDE | n/a | Classifies every threat |
+
+Rules for how the catalogs work:
+
+- **Importable, not hand-typed.** MITRE ATT&CK and ATLAS publish machine-readable data: STIX bundles and the ATLAS YAML/STIX files. Settings → Libraries → *Import framework update* loads a new release.
+  - The app shows a diff of added, renamed and deprecated IDs.
+  - It flags threat rules whose mapped IDs changed.
+  - OWASP lists are maintained as editable JSON catalogs.
+- **Every threat gets at least one traditional mapping.** That means a STRIDE category, plus an ATT&CK technique and an OWASP (web, API or NHI) category wherever one applies. AI threats also get their ATLAS and OWASP LLM/Agentic tags.
+  - Example: a prompt-injection-to-tool-call scenario is tagged LLM01 + ASI01/ASI02 + an ATLAS technique (LLM Prompt Injection), and also ATT&CK where the resulting action maps (e.g. exfiltration or account manipulation), OWASP A01 Broken Access Control, and STRIDE *Elevation of privilege*.
+- **Traditional-only threat rules** exist for every component type (SSRF, IDOR, injection, secrets exposure, misconfiguration, supply chain, lateral movement, logging gaps). AI components are assessed as full applications, not just models.
+
 ## 5. Two-way sync rules
 
 - Adding or removing a node on the canvas adds or removes its question set. Answers for a removed node are kept until you confirm deletion.
@@ -106,8 +138,8 @@ Shipped as versioned JSON/TS data files so they can be edited without touching U
 - Multi-user collaboration.
 - Additional exports: diagram PNG/SVG, CSV/Excel risk register.
 
-## 8. Open questions
+## 8. Resolved questions
 
-- Should the threat-rule library and lexicon be editable inside the app (Settings), or only by editing the data files?
-- Report branding: does the report need an organization logo, classification banner ("INTERNAL WORKING STANDARD"), or a specific template?
-- Where should OWASP and ATLAS IDs be pinned? Both lists change over time, so the version should be recorded in the assessment.
+- Libraries (rules, lexicon, questions, patterns, framework mappings) are editable in-app. Edits are stored locally and can be exported and imported as a library pack (JSON), so they survive browser resets.
+- No report branding.
+- Frameworks: latest MITRE ATLAS and ATT&CK, and the latest of all relevant OWASP lists, AI and traditional. Traditional security is applied to every component (section 4a).

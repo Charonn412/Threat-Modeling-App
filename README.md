@@ -37,12 +37,27 @@ See [`docs/PRODUCT_SPEC.md`](docs/PRODUCT_SPEC.md) for the full design.
   - Treatment choice (avoid / mitigate / transfer / accept risk) and Appendix D secure patterns with their ASVS 5.0 chapters.
   - Owners, due dates, validation, and risk acceptance with an expiry date.
   - A register-health check for missing ratings, treatments and owners.
+- **Report (Stage 8, Appendix H)**
+  - A live preview, plus one-click **PDF** and **Word (.docx)** downloads and print. All are generated in the browser from the same content.
+  - Sections:
+    - Executive summary with top risks and key open items.
+    - Charter and scope.
+    - Architecture: a vector diagram with numbered flows, the component inventory, a fully labeled flow table, and trust boundaries.
+    - Appendix B/F discovery record.
+    - Security objectives.
+    - Appendix E threat worksheets with Section 9 narratives and framework mappings.
+    - Dismissed threats with reasons.
+    - Heatmaps and the risk register.
+    - Framework coverage traceability.
+    - Gaps and unknowns.
+    - Appendix H approval and sign-off.
+  - Each section can be switched on or off.
 - **Settings**
   - A configurable risk matrix: rename levels and click cells to change ratings.
   - The framework catalog versions, and the versions this assessment was assessed against.
 - **Saving:** autosaves to browser storage. **Save file / Open** exports and imports the full assessment as JSON.
 
-Planned next: the PDF/Word report, then in-app editing of libraries (questions, rules, lexicon, templates, framework imports).
+Planned next: in-app editing of libraries (questions, rules, lexicon, templates, framework imports), then Stage 7 validation and evidence tracking (Appendix G).
 
 ## Framework data
 
@@ -74,5 +89,6 @@ src/
   logic/      Tier, gaps/completeness, description analyzer, threat engine, risk (+ tests)
   state/      Zustand store with autosave
   io/         JSON save/open and migration
+  report/     Report builder (format-neutral blocks), architecture SVG, PDF (pdfmake) and Word (docx) renderers
   ui/         Pages, canvas (React Flow), inspector
 ```

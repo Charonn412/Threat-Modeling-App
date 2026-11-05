@@ -1,5 +1,5 @@
 import { DEFAULT_FRAMEWORK_VERSIONS } from '../model/factory';
-import { SCHEMA_VERSION, defaultRiskMatrix, emptyIntake, emptyObjectives, type Assessment } from '../model/types';
+import { SCHEMA_VERSION, defaultRiskMatrix, emptyIntake, emptyObjectives, emptySignOff, type Assessment } from '../model/types';
 
 const FILE_KIND = 'ai-threat-model';
 
@@ -41,6 +41,7 @@ export function migrate(raw: unknown): Assessment {
     },
     threats: a.threats ?? [],
     settings: { riskMatrix: a.settings?.riskMatrix ?? defaultRiskMatrix() },
+    signOff: { ...emptySignOff(), ...(a.signOff ?? {}) },
     // Schema 1 files predate threat assessment, so they adopt the current catalogs.
     frameworkVersions: (a.schemaVersion ?? 1) < 2 ? { ...DEFAULT_FRAMEWORK_VERSIONS } : { ...DEFAULT_FRAMEWORK_VERSIONS, ...(a.frameworkVersions ?? {}) },
   };
@@ -59,13 +60,20 @@ export function parse(text: string): Assessment {
   return migrate(data);
 }
 
-export function fileNameFor(a: Assessment): string {
+export function fileBase(a: Assessment): string {
   const base = (a.intake.systemName || 'threat-model').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-  return `${base || 'threat-model'}.tm.json`;
+  return base || 'threat-model';
+}
+
+export function fileNameFor(a: Assessment): string {
+  return `${fileBase(a)}.tm.json`;
 }
 
 export function downloadText(filename: string, text: string, mime = 'application/json') {
-  const blob = new Blob([text], { type: mime });
+  downloadBlob(filename, new Blob([text], { type: mime }));
+}
+
+export function downloadBlob(filename: string, blob: Blob) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;

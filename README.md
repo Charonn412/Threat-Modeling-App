@@ -102,6 +102,23 @@ npm test           # unit tests (vitest)
 npm run build      # static build in dist/ (relative paths; host anywhere or open locally)
 ```
 
+## Deploying to GitHub Pages
+
+`.github/workflows/deploy-pages.yml` tests, builds and publishes the app on every push to `main`, and can also be run manually from the Actions tab.
+
+To turn it on once:
+
+1. Go to **Settings → Pages**.
+2. Under **Build and deployment → Source**, choose **GitHub Actions**.
+3. Re-run the workflow, or push to `main`.
+
+The site is then served at `https://<owner>.github.io/Threat-Modeling-App/`.
+
+Notes:
+
+- Pages on a private repository requires a paid GitHub plan.
+- A Pages site is publicly reachable even when the repository is private (except with Enterprise Cloud access control). Assessments are never uploaded: they live only in each visitor's browser. However, the app's built-in library contains text adapted from the methodology document. Confirm that document's classification before publishing.
+
 ## Project layout
 
 ```

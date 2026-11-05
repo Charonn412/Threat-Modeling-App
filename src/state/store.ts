@@ -11,6 +11,7 @@ import {
   type Intake,
   type Objectives,
   type SignOff,
+  type Control,
   type RiskMatrix,
   type Threat,
   type TrustBoundary,
@@ -19,9 +20,10 @@ import { NODE_W } from '../logic/analysis';
 import type { DiagramSuggestion } from '../library/questions';
 import { migrate } from '../io/file';
 import { emptyThreat, nextThreatRef, refreshThreats, type RefreshResult } from '../logic/threats';
+import { emptyControl, generateControls } from '../logic/controls';
 import { catalogVersions } from '../library/frameworks';
 
-export type Step = 'start' | 'intake' | 'architecture' | 'gaps' | 'objectives' | 'threats' | 'risk' | 'report' | 'settings' | 'libraries';
+export type Step = 'start' | 'intake' | 'architecture' | 'gaps' | 'objectives' | 'threats' | 'risk' | 'report' | 'settings' | 'libraries' | 'validation';
 export type Selection = { kind: 'component' | 'flow' | 'boundary'; id: string } | null;
 
 export interface Layers {
@@ -73,6 +75,13 @@ interface State {
 
   updateRiskMatrix(m: RiskMatrix): void;
   updateSignOff(patch: Partial<SignOff>): void;
+
+  generateControls(): { added: number; linked: number } | null;
+  addControl(): string;
+  updateControl(id: string, patch: Partial<Control>): void;
+  removeControl(id: string): void;
+  selectedControl: string | null;
+  selectControl(id: string | null): void;
 
   select(sel: Selection): void;
   toggleLayer(k: keyof Layers): void;
@@ -213,12 +222,36 @@ export const useStore = create<State>()(
           return t.id;
         },
         removeThreat: (id) => {
-          mutate((a) => ({ ...a, threats: a.threats.filter((t) => t.id !== id) }));
+          mutate((a) => ({
+            ...a,
+            threats: a.threats.filter((t) => t.id !== id),
+            controls: a.controls.map((c) => ({ ...c, threatIds: c.threatIds.filter((x) => x !== id) })),
+          }));
           set({ selectedThreat: null });
         },
         selectedThreat: null,
         selectThreat: (selectedThreat) => set({ selectedThreat }),
 
+        generateControls: () => {
+          const a = get().assessment;
+          if (!a) return null;
+          const r = generateControls(a);
+          if (r.added || r.linked) mutate((x) => ({ ...x, controls: r.controls }));
+          return { added: r.added, linked: r.linked };
+        },
+        addControl: () => {
+          const c = emptyControl(get().assessment!.controls);
+          mutate((a) => ({ ...a, controls: [...a.controls, c] }));
+          set({ selectedControl: c.id });
+          return c.id;
+        },
+        updateControl: (id, patch) => mutate((a) => ({ ...a, controls: a.controls.map((c) => (c.id === id ? { ...c, ...patch } : c)) })),
+        removeControl: (id) => {
+          mutate((a) => ({ ...a, controls: a.controls.filter((c) => c.id !== id) }));
+          set({ selectedControl: null });
+        },
+        selectedControl: null,
+        selectControl: (selectedControl) => set({ selectedControl }),
         updateSignOff: (patch) => mutate((a) => ({ ...a, signOff: { ...a.signOff, ...patch } })),
         updateRiskMatrix: (m) => mutate((a) => ({ ...a, settings: { ...a.settings, riskMatrix: m } })),
 

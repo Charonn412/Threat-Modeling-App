@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { DOMAINS } from '../library/threatRules';
 import { PATTERNS, getPattern } from '../library/patterns';
 import { narrative, type RefreshResult } from '../logic/threats';
+import { threatEvidence, verification } from '../logic/controls';
+import { VerificationBadge } from './ValidationPage';
 import { rating } from '../logic/risk';
 import { OBJECTIVE_LABEL, type ObjectiveId, type Threat, type ThreatStatus, type Treatment } from '../model/types';
 import { useStore } from '../state/store';
@@ -393,10 +395,11 @@ function ThreatEditor({ t }: { t: Threat }) {
         <Field label="Due date">
           <input className="input" type="date" value={t.dueDate} onChange={(e) => set({ dueDate: e.target.value })} />
         </Field>
-        <Field label="Validation (test method, expected result)">
+        <Field label="Validation notes">
           <TextInput value={t.validation} onChange={(v) => set({ validation: v })} />
         </Field>
       </div>
+      <ControlsForThreat t={t} />
 
       <h3 className="mt">Residual risk</h3>
       <div className="grid3 align-end">
@@ -419,6 +422,41 @@ function ThreatEditor({ t }: { t: Threat }) {
         </Field>
       </div>
       {acceptWarnings.length > 0 && <p className="small warn">Risk acceptance needs: {acceptWarnings.join(', ')} (Section 10).</p>}
+    </div>
+  );
+}
+
+function ControlsForThreat({ t }: { t: Threat }) {
+  const a = useStore((s) => s.assessment)!;
+  const selectControl = useStore((s) => s.selectControl);
+  const setStep = useStore((s) => s.setStep);
+  const ev = threatEvidence(a, t);
+  if (!ev.controls.length && t.treatment !== 'mitigate') return null;
+  return (
+    <div className="field">
+      <span className="field-label">Controls and evidence (Stage 7)</span>
+      {ev.controls.length ? (
+        <ul className="small plain">
+          {ev.controls.map((c) => (
+            <li key={c.id} className="row gap">
+              <button
+                type="button"
+                className="link"
+                onClick={() => {
+                  selectControl(c.id);
+                  setStep('validation');
+                }}
+              >
+                {c.ref} {c.requirement.split(':')[0]}
+              </button>
+              <VerificationBadge v={verification(c)} />
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <span className="small muted">No tracked controls yet. Select patterns, then use "From treatments" on the Validation page.</span>
+      )}
+      {ev.unsupportedReduction && <span className="field-hint warn">The residual rating is lower than inherent, but no linked control is verified yet.</span>}
     </div>
   );
 }

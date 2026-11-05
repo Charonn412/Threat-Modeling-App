@@ -516,6 +516,7 @@ export function LexiconForm({ item, isNew, onSaved, onCancelNew }: FormProps<Lex
 export function PatternForm({ item, isNew, onSaved, onCancelNew }: FormProps<Pattern>) {
   const { draft, setDraft, dirty, idError, state, reset } = useDraft('patterns', item, isNew);
   const [asvsText, setAsvsText] = useState(item.asvs.join('\n'));
+  const [testsText, setTestsText] = useState((item.tests ?? []).join('\n'));
   const set = (p: Partial<Pattern>) => setDraft({ ...draft, ...p });
   const error = idError ?? (!draft.name.trim() ? 'Name is required.' : null);
   return (
@@ -538,6 +539,17 @@ export function PatternForm({ item, isNew, onSaved, onCancelNew }: FormProps<Pat
           }}
         />
       </Field>
+      <Field label='Suggested validation tests (one per line; start with "Negative:" for tests that prove unauthorized behavior is denied)'>
+        <textarea
+          className="input"
+          rows={4}
+          value={testsText}
+          onChange={(e) => {
+            setTestsText(e.target.value);
+            set({ tests: lines(e.target.value) });
+          }}
+        />
+      </Field>
       <EditorActions
         collection="patterns"
         id={item.id}
@@ -554,6 +566,7 @@ export function PatternForm({ item, isNew, onSaved, onCancelNew }: FormProps<Pat
           else {
             reset();
             setAsvsText(item.asvs.join('\n'));
+            setTestsText((item.tests ?? []).join('\n'));
           }
         }}
         onDeleted={onCancelNew}

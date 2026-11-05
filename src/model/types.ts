@@ -1,6 +1,6 @@
 // Core domain model for an assessment. See docs/PRODUCT_SPEC.md §3.
 
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 export type Tier = 1 | 2 | 3; // 1 = Light, 2 = Standard, 3 = Deep
 export const TIER_LABEL: Record<Tier, string> = { 1: 'Light', 2: 'Standard', 3: 'Deep' };
@@ -187,6 +187,58 @@ export interface RiskMatrix {
   grid: Level[][];
 }
 
+/** Section 11 validation test: method, expected vs actual, evidence, tester. */
+export type TestResult = '' | 'pass' | 'fail' | 'blocked';
+
+export interface ValidationTest {
+  id: string;
+  method: string;
+  negative: boolean; // proves unauthorized behavior is denied
+  expected: string;
+  actual: string;
+  result: TestResult;
+  evidenceLocation: string;
+  testDate: string;
+  tester: string;
+  remediationOwner: string;
+}
+
+export type ControlStatus = 'planned' | 'in-progress' | 'implemented' | 'not-applicable';
+export type EvidenceType = '' | 'architecture' | 'testing' | 'operational' | 'governance';
+
+/** Appendix G control and evidence tracker row. */
+export interface Control {
+  id: string;
+  ref: string; // e.g. "CTL-004"
+  requirement: string;
+  patternId: string | null;
+  threatIds: string[];
+  owner: string;
+  status: ControlStatus;
+  evidenceType: EvidenceType;
+  tests: ValidationTest[];
+  residualGap: string;
+  dueDate: string;
+}
+
+export const CONTROL_STATUS_LABEL: Record<ControlStatus, string> = {
+  planned: 'Planned',
+  'in-progress': 'In progress',
+  implemented: 'Implemented',
+  'not-applicable': 'Not applicable',
+};
+
+/** Section 13 lifecycle reassessment triggers. */
+export const REASSESSMENT_TRIGGERS: { id: string; label: string }[] = [
+  { id: 'model', label: 'New model, model version, provider, hosting region, endpoint, fine-tune or model-routing behavior' },
+  { id: 'capability', label: 'New tool, plugin, connector, API, capability, permission, delegated agent or action type' },
+  { id: 'data', label: 'New data source, classification, retrieval corpus, embedding/index change, training dataset or retention purpose' },
+  { id: 'prompting', label: 'Change to system prompts, policies, orchestration, memory, context assembly, output handling or safety configuration' },
+  { id: 'use', label: 'Change in user population, external exposure, tenant model, business purpose, scale, autonomy or decision impact' },
+  { id: 'incident', label: 'Security incident, near miss, evaluation regression, drift, provider notification, vulnerability or material threat intelligence' },
+  { id: 'obligation', label: 'Material change to applicable law, regulation, contract, internal policy or risk appetite' },
+];
+
 /** Appendix H – approval and sign-off record (Stage 8 decision). */
 export type Decision = '' | 'approved' | 'approved-conditions' | 'hold' | 'redesign';
 
@@ -203,6 +255,10 @@ export interface SignOff {
   conditions: string;
   reassessmentDate: string;
   evidenceRepository: string;
+  /** Stage 9 – maintain and re-open. */
+  reviewCadence: string;
+  monitoringOwner: string;
+  triggers: string[];
 }
 
 export const DECISION_LABEL: Record<Exclude<Decision, ''>, string> = {
@@ -225,6 +281,9 @@ export const emptySignOff = (): SignOff => ({
   conditions: '',
   reassessmentDate: '',
   evidenceRepository: '',
+  reviewCadence: '',
+  monitoringOwner: '',
+  triggers: [],
 });
 
 export interface Settings {
@@ -246,6 +305,7 @@ export interface Assessment {
   threats: Threat[];
   settings: Settings;
   signOff: SignOff;
+  controls: Control[];
   /** Framework catalog versions this assessment is assessed against (spec §4a). */
   frameworkVersions: Record<string, string>;
 }

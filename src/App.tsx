@@ -10,6 +10,7 @@ import { ThreatsPage } from './ui/ThreatsPage';
 import { RiskPage } from './ui/RiskPage';
 import { SettingsPage } from './ui/SettingsPage';
 import { ReportPage } from './ui/ReportPage';
+import { ValidationPage } from './ui/ValidationPage';
 import { LibrariesPage } from './ui/library/LibrariesPage';
 import { TIER_LABEL } from './model/types';
 import { useTier } from './ui/hooks';
@@ -20,8 +21,9 @@ const STEPS: { id: Step | string; label: string; enabled: boolean }[] = [
   { id: 'gaps', label: 'Gaps', enabled: true },
   { id: 'objectives', label: '3 · Objectives', enabled: true },
   { id: 'threats', label: '4 · Threats', enabled: true },
-  { id: 'risk', label: '5–6 · Risk & treatment', enabled: true },
-  { id: 'report', label: '7 · Report', enabled: true },
+  { id: 'risk', label: '5–6 · Risk', enabled: true },
+  { id: 'validation', label: '7 · Validation', enabled: true },
+  { id: 'report', label: '8 · Report', enabled: true },
   { id: 'libraries', label: '📚', enabled: true },
   { id: 'settings', label: '⚙', enabled: true },
 ];
@@ -103,13 +105,14 @@ export default function App() {
           </button>
         </div>
       </TopBar>
-      <main className={`main ${step === 'architecture' || step === 'threats' || step === 'report' || step === 'libraries' ? '' : 'scroll'}`}>
+      <main className={`main ${step === 'architecture' || step === 'threats' || step === 'validation' || step === 'report' || step === 'libraries' ? '' : 'scroll'}`}>
         {step === 'intake' && <IntakePage />}
         {step === 'architecture' && <ArchitecturePage />}
         {step === 'gaps' && <GapsPage />}
         {step === 'objectives' && <ObjectivesPage />}
         {step === 'threats' && <ThreatsPage />}
         {step === 'risk' && <RiskPage />}
+        {step === 'validation' && <ValidationPage />}
         {step === 'report' && <ReportPage />}
         {step === 'settings' && <SettingsPage />}
         {step === 'libraries' && <LibrariesPage />}

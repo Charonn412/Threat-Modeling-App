@@ -56,9 +56,11 @@ describe('report builder', () => {
       '5. Security objectives',
       '6. Threat scenarios',
       '7. Risk register and treatment',
-      '8. Framework coverage',
-      '9. Open items, assumptions and gaps',
-      '10. Approval and sign-off',
+      '8. Control and evidence tracker',
+      '9. Framework coverage',
+      '10. Open items, assumptions and gaps',
+      '11. Definition of done',
+      '12. Approval and sign-off',
     ]);
     expect(blocks.some((b) => b.t === 'diagram')).toBe(true);
   });

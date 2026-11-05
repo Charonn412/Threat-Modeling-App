@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
 import { buildReport, defaultReportOptions, SECTIONS, type ReportOptions } from '../report/build';
 import type { Block, Cell } from '../report/blocks';
-import { DECISION_LABEL, type Decision, type SignOff } from '../model/types';
+import { DECISION_LABEL, REASSESSMENT_TRIGGERS, type Decision, type SignOff } from '../model/types';
+import { definitionOfDone } from '../logic/controls';
+import { useTier } from './hooks';
 import { useStore } from '../state/store';
 import { Field, TextArea, TextInput } from './controls';
 import { downloadBlob, fileBase } from '../io/file';
@@ -16,6 +18,8 @@ export function ReportPage() {
   const title = `${a.intake.systemName || 'Untitled AI system'}: AI threat model`;
   const s = a.signOff;
   const set = (patch: Partial<SignOff>) => update(patch);
+  const tier = useTier();
+  const dod = useMemo(() => definitionOfDone(a, tier), [a, tier]);
 
   const exportPdf = async () => {
     setBusy('pdf');
@@ -61,6 +65,18 @@ export function ReportPage() {
           {error && <p className="small warn">{error}</p>}
           <p className="small muted">Generated in your browser. Nothing is uploaded.</p>
         </div>
+
+        <h3 className="mt">
+          Definition of done ({dod.filter((d) => d.done).length}/{dod.length})
+        </h3>
+        <ul className="small plain dod">
+          {dod.map((d) => (
+            <li key={d.label} title={d.label}>
+              <span className={d.done ? 'ok' : 'warn'}>{d.done ? '✓' : '○'}</span> {d.label.split(';')[0].split(',')[0].replace(/\.$/, '')}
+              {!d.done && <div className="muted">{d.detail}</div>}
+            </li>
+          ))}
+        </ul>
 
         <h3 className="mt">Sections</h3>
         {SECTIONS.map((sec) => (
@@ -123,6 +139,32 @@ export function ReportPage() {
           <Field label="Evidence repository">
             <TextInput value={s.evidenceRepository} onChange={(v) => set({ evidenceRepository: v })} />
           </Field>
+        </div>
+
+        <h3 className="mt">Maintain and re-open (Stage 9)</h3>
+        <div className="grid2">
+          <Field label="Review cadence">
+            <TextInput value={s.reviewCadence} onChange={(v) => set({ reviewCadence: v })} placeholder="e.g. Every 6 months" />
+          </Field>
+          <Field label="Monitoring owner">
+            <TextInput value={s.monitoringOwner} onChange={(v) => set({ monitoringOwner: v })} />
+          </Field>
+        </div>
+        <div className="field">
+          <span className="field-label">Reassessment triggers to monitor (Section 13)</span>
+          {REASSESSMENT_TRIGGERS.map((t) => (
+            <label key={t.id} className="small toggle block-label">
+              <input
+                type="checkbox"
+                checked={s.triggers.includes(t.id)}
+                onChange={(e) => set({ triggers: e.target.checked ? [...s.triggers, t.id] : s.triggers.filter((x) => x !== t.id) })}
+              />{' '}
+              {t.label}
+            </label>
+          ))}
+          <button type="button" className="link small" onClick={() => set({ triggers: REASSESSMENT_TRIGGERS.map((t) => t.id) })}>
+            Select all
+          </button>
         </div>
       </aside>
       <div className="report-scroll">

@@ -37,6 +37,11 @@ See [`docs/PRODUCT_SPEC.md`](docs/PRODUCT_SPEC.md) for the full design.
   - Treatment choice (avoid / mitigate / transfer / accept risk) and Appendix D secure patterns with their ASVS 5.0 chapters.
   - Owners, due dates, validation, and risk acceptance with an expiry date.
   - A register-health check for missing ratings, treatments and owners.
+- **Stage 7 · Validation (Section 11, Appendix G)**
+  - One click creates a control for each secure pattern chosen on treated threats. Each control comes pre-filled with suggested validation tests, mostly *negative* tests, which you can edit in the library.
+  - Each test records its method, expected and actual result, pass/fail/blocked, evidence location, date, tester and remediation owner.
+  - Evidence-backed status is derived from the tests and shown next to the claimed status. A control is **Verified** only when every executed test passed, including at least one negative test.
+  - Threats whose residual rating relies on unverified controls are flagged.
 - **Report (Stage 8, Appendix H)**
   - A live preview, plus one-click **PDF** and **Word (.docx)** downloads and print. All are generated in the browser from the same content.
   - Sections:
@@ -48,9 +53,11 @@ See [`docs/PRODUCT_SPEC.md`](docs/PRODUCT_SPEC.md) for the full design.
     - Appendix E threat worksheets with Section 9 narratives and framework mappings.
     - Dismissed threats with reasons.
     - Heatmaps and the risk register.
+    - The Appendix G control and evidence tracker, with the validation test log.
     - Framework coverage traceability.
     - Gaps and unknowns.
-    - Appendix H approval and sign-off.
+    - The Section 14 definition of done, evaluated from the record.
+    - Appendix H approval and sign-off, including Stage 9 review cadence, monitoring owner and Section 13 reassessment triggers.
   - Each section can be switched on or off.
 - **📚 Libraries (in-app editing, spec §4)**
   - Edit, add, disable or restore the content the app runs on:
@@ -69,7 +76,7 @@ See [`docs/PRODUCT_SPEC.md`](docs/PRODUCT_SPEC.md) for the full design.
   - The framework catalog versions, and the versions this assessment was assessed against.
 - **Saving:** autosaves to browser storage. **Save file / Open** exports and imports the full assessment as JSON.
 
-Planned next: Stage 7 validation and evidence tracking (Appendix G).
+All nine methodology stages are covered.
 
 Note: an assessment that uses custom component types or rules needs the same library pack on the machine that opens it. Share the pack alongside the `.tm.json` file.
 

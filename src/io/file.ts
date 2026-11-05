@@ -42,6 +42,7 @@ export function migrate(raw: unknown): Assessment {
     threats: a.threats ?? [],
     settings: { riskMatrix: a.settings?.riskMatrix ?? defaultRiskMatrix() },
     signOff: { ...emptySignOff(), ...(a.signOff ?? {}) },
+    controls: a.controls ?? [],
     // Schema 1 files predate threat assessment, so they adopt the current catalogs.
     frameworkVersions: (a.schemaVersion ?? 1) < 2 ? { ...DEFAULT_FRAMEWORK_VERSIONS } : { ...DEFAULT_FRAMEWORK_VERSIONS, ...(a.frameworkVersions ?? {}) },
   };

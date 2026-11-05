@@ -1,6 +1,6 @@
 // Core domain model for an assessment. See docs/PRODUCT_SPEC.md §3.
 
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 export type Tier = 1 | 2 | 3; // 1 = Light, 2 = Standard, 3 = Deep
 export const TIER_LABEL: Record<Tier, string> = { 1: 'Light', 2: 'Standard', 3: 'Deep' };
@@ -187,6 +187,46 @@ export interface RiskMatrix {
   grid: Level[][];
 }
 
+/** Appendix H – approval and sign-off record (Stage 8 decision). */
+export type Decision = '' | 'approved' | 'approved-conditions' | 'hold' | 'redesign';
+
+export interface SignOff {
+  assessmentId: string;
+  version: string;
+  assessmentDate: string;
+  businessOwner: string;
+  technicalOwner: string;
+  securityReviewer: string;
+  privacyLegalRisk: string;
+  decision: Decision;
+  acceptanceAuthority: string;
+  conditions: string;
+  reassessmentDate: string;
+  evidenceRepository: string;
+}
+
+export const DECISION_LABEL: Record<Exclude<Decision, ''>, string> = {
+  approved: 'Approved',
+  'approved-conditions': 'Approved with conditions',
+  hold: 'Not approved / hold',
+  redesign: 'Retire / redesign',
+};
+
+export const emptySignOff = (): SignOff => ({
+  assessmentId: '',
+  version: '1.0',
+  assessmentDate: '',
+  businessOwner: '',
+  technicalOwner: '',
+  securityReviewer: '',
+  privacyLegalRisk: '',
+  decision: '',
+  acceptanceAuthority: '',
+  conditions: '',
+  reassessmentDate: '',
+  evidenceRepository: '',
+});
+
 export interface Settings {
   riskMatrix: RiskMatrix;
 }
@@ -205,6 +245,7 @@ export interface Assessment {
   objectives: Objectives;
   threats: Threat[];
   settings: Settings;
+  signOff: SignOff;
   /** Framework catalog versions this assessment is assessed against (spec §4a). */
   frameworkVersions: Record<string, string>;
 }

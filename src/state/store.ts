@@ -10,6 +10,7 @@ import {
   type Flow,
   type Intake,
   type Objectives,
+  type SignOff,
   type RiskMatrix,
   type Threat,
   type TrustBoundary,
@@ -20,7 +21,7 @@ import { migrate } from '../io/file';
 import { emptyThreat, nextThreatRef, refreshThreats, type RefreshResult } from '../logic/threats';
 import { catalogVersions } from '../library/frameworks';
 
-export type Step = 'start' | 'intake' | 'architecture' | 'gaps' | 'objectives' | 'threats' | 'risk' | 'settings';
+export type Step = 'start' | 'intake' | 'architecture' | 'gaps' | 'objectives' | 'threats' | 'risk' | 'report' | 'settings';
 export type Selection = { kind: 'component' | 'flow' | 'boundary'; id: string } | null;
 
 export interface Layers {
@@ -71,6 +72,7 @@ interface State {
   selectThreat(id: string | null): void;
 
   updateRiskMatrix(m: RiskMatrix): void;
+  updateSignOff(patch: Partial<SignOff>): void;
 
   select(sel: Selection): void;
   toggleLayer(k: keyof Layers): void;
@@ -217,6 +219,7 @@ export const useStore = create<State>()(
         selectedThreat: null,
         selectThreat: (selectedThreat) => set({ selectedThreat }),
 
+        updateSignOff: (patch) => mutate((a) => ({ ...a, signOff: { ...a.signOff, ...patch } })),
         updateRiskMatrix: (m) => mutate((a) => ({ ...a, settings: { ...a.settings, riskMatrix: m } })),
 
         select: (selection) => set({ selection }),

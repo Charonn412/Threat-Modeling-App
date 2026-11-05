@@ -5,6 +5,7 @@ import {
   defaultRiskMatrix,
   emptyIntake,
   emptyObjectives,
+  emptySignOff,
   type Assessment,
   type BoundaryKind,
   type Component,
@@ -85,6 +86,7 @@ export function newAssessment(): Assessment {
     objectives: emptyObjectives(),
     threats: [],
     settings: { riskMatrix: defaultRiskMatrix() },
+    signOff: emptySignOff(),
     frameworkVersions: { ...DEFAULT_FRAMEWORK_VERSIONS },
   };
 }

@@ -9,6 +9,7 @@ import { ObjectivesPage } from './ui/ObjectivesPage';
 import { ThreatsPage } from './ui/ThreatsPage';
 import { RiskPage } from './ui/RiskPage';
 import { SettingsPage } from './ui/SettingsPage';
+import { ReportPage } from './ui/ReportPage';
 import { TIER_LABEL } from './model/types';
 import { useTier } from './ui/hooks';
 
@@ -19,7 +20,7 @@ const STEPS: { id: Step | string; label: string; enabled: boolean }[] = [
   { id: 'objectives', label: '3 · Objectives', enabled: true },
   { id: 'threats', label: '4 · Threats', enabled: true },
   { id: 'risk', label: '5–6 · Risk & treatment', enabled: true },
-  { id: 'report', label: 'Report', enabled: false },
+  { id: 'report', label: '7 · Report', enabled: true },
   { id: 'settings', label: '⚙', enabled: true },
 ];
 
@@ -92,13 +93,14 @@ export default function App() {
           </button>
         </div>
       </TopBar>
-      <main className={`main ${step === 'architecture' || step === 'threats' ? '' : 'scroll'}`}>
+      <main className={`main ${step === 'architecture' || step === 'threats' || step === 'report' ? '' : 'scroll'}`}>
         {step === 'intake' && <IntakePage />}
         {step === 'architecture' && <ArchitecturePage />}
         {step === 'gaps' && <GapsPage />}
         {step === 'objectives' && <ObjectivesPage />}
         {step === 'threats' && <ThreatsPage />}
         {step === 'risk' && <RiskPage />}
+        {step === 'report' && <ReportPage />}
         {step === 'settings' && <SettingsPage />}
       </main>
     </div>
@@ -109,7 +111,7 @@ function TopBar({ children }: { children?: React.ReactNode }) {
   const name = useStore((s) => s.assessment?.intake.systemName);
   const step = useStore((s) => s.step);
   return (
-    <header className="topbar">
+    <header className="topbar no-print">
       <div className="brand">
         <span aria-hidden>🛡</span> AI Threat Modeler
         {name && step !== 'start' && <span className="muted"> / {name}</span>}

@@ -22,9 +22,38 @@ See [`docs/PRODUCT_SPEC.md`](docs/PRODUCT_SPEC.md) for the full design.
   - **Layer toggles:** data plane, control plane, trust boundaries and flow labels.
 - **Gaps**
   - Lists Unknowns (each needs an owner and date), boundary-crossing flows with missing labels, isolated components and unanswered questions.
+- **Stage 3 · Objectives (Section 8)**
+  - Statements for the seven security objectives, each with the methodology's baseline available to insert.
+  - Action authority: what the system must never do, may do only with approval, or may do on its own. Tools and effects from the architecture are offered for classification.
+- **Stage 4 · Threats (Appendix C, E)**
+  - 48 threat rules run against the components, flows, trust boundaries, answers and intake, and they re-run whenever the page opens.
+  - Each candidate is a full Appendix E worksheet with a generated Section 9 narrative.
+  - Each candidate is mapped to OWASP (LLM, Agentic, ML, Top 10, API, NHI, CI/CD, Kubernetes), MITRE ATLAS, MITRE ATT&CK and STRIDE. Every rule carries traditional mappings.
+  - Suggested ratings cite the answers and intake facts behind them, e.g. "B9.2: execution not isolated → likelihood +2".
+  - You confirm, dismiss with a reason, or edit each candidate, and you can add custom threats.
+  - Refreshing never overwrites edits. Threats whose architecture element was removed are flagged as stale.
+- **Stages 5–6 · Risk & treatment (Sections 9–10, Appendix D)**
+  - Inherent and residual heatmaps, plus the Section 9 autonomy/reach modifier.
+  - Treatment choice (avoid / mitigate / transfer / accept risk) and Appendix D secure patterns with their ASVS 5.0 chapters.
+  - Owners, due dates, validation, and risk acceptance with an expiry date.
+  - A register-health check for missing ratings, treatments and owners.
+- **Settings**
+  - A configurable risk matrix: rename levels and click cells to change ratings.
+  - The framework catalog versions, and the versions this assessment was assessed against.
 - **Saving:** autosaves to browser storage. **Save file / Open** exports and imports the full assessment as JSON.
 
-Planned next: security objectives, rule-based threat generation mapped to OWASP (AI and traditional lists), MITRE ATLAS, MITRE ATT&CK and STRIDE, then risk rating and treatment, the PDF/Word report, and in-app library editing.
+Planned next: the PDF/Word report, then in-app editing of libraries (questions, rules, lexicon, templates, framework imports).
+
+## Framework data
+
+MITRE ATLAS and ATT&CK catalogs in `src/library/frameworks/*.json` are generated from MITRE's official releases:
+
+```bash
+# ATLAS: https://github.com/mitre-atlas/atlas-data  (dist/v6/ATLAS-latest.yaml names the current file)
+# ATT&CK: https://github.com/mitre-attack/attack-stix-data  (enterprise-attack/enterprise-attack.json)
+python3 -I scripts/extract_frameworks.py ATLAS-<version>.yaml enterprise-attack.json src/library/frameworks
+npm test   # fails if any threat rule references an ID that no longer exists
+```
 
 ## Development
 
@@ -40,8 +69,9 @@ npm run build      # static build in dist/ (relative paths; host anywhere or ope
 ```
 src/
   model/      Domain types, factories
-  library/    Content as data: component catalog, question bank, intake form, templates, description lexicon
-  logic/      Tier calculation, boundary/gap/completeness analysis, description analyzer (+ tests)
+  library/    Content as data: component catalog, question bank, intake form, templates, lexicon,
+              threat rules, secure patterns, framework catalogs (OWASP, ATLAS, ATT&CK, STRIDE)
+  logic/      Tier, gaps/completeness, description analyzer, threat engine, risk (+ tests)
   state/      Zustand store with autosave
   io/         JSON save/open and migration
   ui/         Pages, canvas (React Flow), inspector

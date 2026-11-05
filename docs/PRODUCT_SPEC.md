@@ -93,17 +93,17 @@ Each framework is its own versioned catalog. Each assessment records the catalog
 
 | Framework | Version at spec time | Applies to |
 |---|---|---|
-| OWASP Top 10 for LLM Applications | 2026 edition, if published; otherwise 2025 (verify on genai.owasp.org) | GenAI, RAG and agent components |
+| OWASP Top 10 for LLM Applications | 2025 (a 2026 edition could not be confirmed; update the catalog when verified) | GenAI, RAG and agent components |
 | OWASP Top 10 for Agentic Applications | 2026 (ASI01–ASI10) | Agents, tools, memory, delegation |
 | OWASP Machine Learning Security Top 10 | 2023 (latest) | Traditional ML, training pipeline |
 | OWASP Top 10 (web applications) | 2025 (A01–A10) | UI, backend, all app components |
 | OWASP API Security Top 10 | 2023 (latest) | APIs, gateways, tool connectors |
 | OWASP Non-Human Identities Top 10 | 2025 | Service accounts, agent and tool identities, secrets |
-| OWASP Top 10 CI/CD Security Risks | latest | Model and app deployment pipelines |
-| OWASP Kubernetes Top 10 | latest | Container hosting |
+| OWASP Top 10 CI/CD Security Risks | 2022 (latest) | Model and app deployment pipelines |
+| OWASP Kubernetes Top 10 | 2022 | Container hosting |
 | OWASP ASVS | 5.0 | Verification requirements, mapped to controls and patterns |
-| MITRE ATLAS | v2026.09 | AI-specific tactics and techniques |
-| MITRE ATT&CK (Enterprise) | v20 (Oct 2026), including the v19 split of Defense Evasion into Stealth and Defense Impairment | Conventional attack paths on every component: identity, cloud, network, supply chain, lateral movement |
+| MITRE ATLAS | 2026.10 (verified against official data, Oct 28 2026) | AI-specific tactics and techniques |
+| MITRE ATT&CK (Enterprise) | v20.1 (verified against official STIX data), including the v19 split of Defense Evasion into Stealth and Defense Impairment | Conventional attack paths on every component: identity, cloud, network, supply chain, lateral movement |
 | STRIDE | n/a | Classifies every threat |
 
 Rules for how the catalogs work:

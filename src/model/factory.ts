@@ -1,7 +1,10 @@
 import { getComponentType } from '../library/catalog';
+import { catalogVersions } from '../library/frameworks';
 import {
   SCHEMA_VERSION,
+  defaultRiskMatrix,
   emptyIntake,
+  emptyObjectives,
   type Assessment,
   type BoundaryKind,
   type Component,
@@ -64,18 +67,7 @@ export function newBoundary(
 }
 
 /** Framework catalog versions recorded on each assessment (spec §4a). */
-export const DEFAULT_FRAMEWORK_VERSIONS: Record<string, string> = {
-  'OWASP LLM Top 10': '2025',
-  'OWASP Agentic Top 10': '2026',
-  'OWASP ML Security Top 10': '2023',
-  'OWASP Top 10': '2025',
-  'OWASP API Security Top 10': '2023',
-  'OWASP Non-Human Identities Top 10': '2025',
-  'OWASP ASVS': '5.0',
-  'MITRE ATLAS': 'v2026.09',
-  'MITRE ATT&CK Enterprise': 'v20',
-  STRIDE: 'n/a',
-};
+export const DEFAULT_FRAMEWORK_VERSIONS: Record<string, string> = catalogVersions();
 
 export function newAssessment(): Assessment {
   const now = new Date().toISOString();
@@ -90,6 +82,9 @@ export function newAssessment(): Assessment {
     flows: [],
     boundaries: [],
     answers: {},
+    objectives: emptyObjectives(),
+    threats: [],
+    settings: { riskMatrix: defaultRiskMatrix() },
     frameworkVersions: { ...DEFAULT_FRAMEWORK_VERSIONS },
   };
 }

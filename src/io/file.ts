@@ -1,5 +1,5 @@
 import { DEFAULT_FRAMEWORK_VERSIONS } from '../model/factory';
-import { SCHEMA_VERSION, emptyIntake, type Assessment } from '../model/types';
+import { SCHEMA_VERSION, defaultRiskMatrix, emptyIntake, emptyObjectives, type Assessment } from '../model/types';
 
 const FILE_KIND = 'ai-threat-model';
 
@@ -34,7 +34,15 @@ export function migrate(raw: unknown): Assessment {
     flows: a.flows,
     boundaries: a.boundaries ?? [],
     answers: a.answers ?? {},
-    frameworkVersions: { ...DEFAULT_FRAMEWORK_VERSIONS, ...(a.frameworkVersions ?? {}) },
+    objectives: {
+      ...emptyObjectives(),
+      ...(a.objectives ?? {}),
+      statements: { ...emptyObjectives().statements, ...(a.objectives?.statements ?? {}) },
+    },
+    threats: a.threats ?? [],
+    settings: { riskMatrix: a.settings?.riskMatrix ?? defaultRiskMatrix() },
+    // Schema 1 files predate threat assessment, so they adopt the current catalogs.
+    frameworkVersions: (a.schemaVersion ?? 1) < 2 ? { ...DEFAULT_FRAMEWORK_VERSIONS } : { ...DEFAULT_FRAMEWORK_VERSIONS, ...(a.frameworkVersions ?? {}) },
   };
 }
 

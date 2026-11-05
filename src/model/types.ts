@@ -1,6 +1,6 @@
 // Core domain model for an assessment. See docs/PRODUCT_SPEC.md §3.
 
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 export type Tier = 1 | 2 | 3; // 1 = Light, 2 = Standard, 3 = Deep
 export const TIER_LABEL: Record<Tier, string> = { 1: 'Light', 2: 'Standard', 3: 'Deep' };
@@ -115,6 +115,82 @@ export interface Intake {
   tierOverride: 0 | Tier;
 }
 
+/** Stage 3 – security objectives (Section 8). */
+export type ObjectiveId = 'confidentiality' | 'integrity' | 'availability' | 'identity' | 'safety' | 'privacy' | 'transparency';
+
+export interface Objectives {
+  statements: Record<ObjectiveId, string>;
+  /** Action authority (Stage 3): one action per line. */
+  neverDo: string;
+  withApproval: string;
+  autonomous: string;
+}
+
+/** Four-point scale used for likelihood, impact and rating: 1 Low … 4 Critical. 0 = not rated. */
+export type Level = 0 | 1 | 2 | 3 | 4;
+
+export interface FrameworkRef {
+  fw: string; // framework id, e.g. 'owasp-llm', 'atlas', 'attack', 'stride'
+  id: string; // item id, e.g. 'LLM01', 'AML.T0051.001', 'T1190', 'S'
+}
+
+export type ThreatStatus = 'candidate' | 'accepted' | 'dismissed';
+export type Treatment = '' | 'avoid' | 'mitigate' | 'transfer' | 'accept';
+
+/** Appendix E threat scenario worksheet. */
+export interface Threat {
+  id: string;
+  ref: string; // human-readable ID, e.g. "TS-007"
+  ruleId: string | null; // generating rule, null for custom threats
+  signature: string | null; // rule + subject; used to refresh without duplicating
+  stale: boolean; // rule no longer matches the architecture
+  edited: boolean; // analyst changed the scenario text; refresh will not overwrite it
+  status: ThreatStatus;
+  dismissReason: string;
+  domain: string;
+  title: string;
+  componentIds: string[];
+  flowIds: string[];
+  actor: string;
+  asset: string;
+  objectives: ObjectiveId[];
+  preconditions: string;
+  attackPath: string;
+  impact: string;
+  frameworks: FrameworkRef[];
+  existingControls: string;
+  evidence: string;
+  signals: string[]; // answers/intake facts that informed the suggested rating
+  inherentLikelihood: Level;
+  inherentImpact: Level;
+  ratingRationale: string;
+  ratingSuggested: boolean; // true until an analyst changes the rating
+  treatment: Treatment;
+  patterns: string[];
+  requirements: string;
+  owner: string;
+  dueDate: string;
+  validation: string;
+  residualLikelihood: Level;
+  residualImpact: Level;
+  residualRationale: string;
+  riskOwner: string;
+  reviewDate: string;
+}
+
+/** Configurable risk matrix (Section 9: use the organization's approved matrix where one exists). */
+export interface RiskMatrix {
+  likelihoodLabels: [string, string, string, string];
+  impactLabels: [string, string, string, string];
+  ratingLabels: [string, string, string, string];
+  /** grid[likelihood-1][impact-1] = rating level 1..4 */
+  grid: Level[][];
+}
+
+export interface Settings {
+  riskMatrix: RiskMatrix;
+}
+
 export interface Assessment {
   schemaVersion: number;
   id: string;
@@ -126,6 +202,9 @@ export interface Assessment {
   flows: Flow[];
   boundaries: TrustBoundary[];
   answers: AnswerMap;
+  objectives: Objectives;
+  threats: Threat[];
+  settings: Settings;
   /** Framework catalog versions this assessment is assessed against (spec §4a). */
   frameworkVersions: Record<string, string>;
 }
@@ -165,3 +244,32 @@ export const emptyAnswer = (): Answer => ({
 });
 
 export const answerKey = (targetId: string, questionId: string) => `${targetId}::${questionId}`;
+
+export const OBJECTIVE_LABEL: Record<ObjectiveId, string> = {
+  confidentiality: 'Confidentiality',
+  integrity: 'Integrity',
+  availability: 'Availability',
+  identity: 'Identity & accountability',
+  safety: 'Safety & human control',
+  privacy: 'Privacy & lawful use',
+  transparency: 'Transparency & explainability',
+};
+
+export const emptyObjectives = (): Objectives => ({
+  statements: { confidentiality: '', integrity: '', availability: '', identity: '', safety: '', privacy: '', transparency: '' },
+  neverDo: '',
+  withApproval: '',
+  autonomous: '',
+});
+
+export const defaultRiskMatrix = (): RiskMatrix => ({
+  likelihoodLabels: ['Low', 'Medium', 'High', 'Critical'],
+  impactLabels: ['Low', 'Medium', 'High', 'Critical'],
+  ratingLabels: ['Low', 'Medium', 'High', 'Critical'],
+  grid: [
+    [1, 1, 2, 3],
+    [1, 2, 3, 3],
+    [2, 3, 3, 4],
+    [2, 3, 4, 4],
+  ],
+});

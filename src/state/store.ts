@@ -9,13 +9,18 @@ import {
   type Component,
   type Flow,
   type Intake,
+  type Objectives,
+  type RiskMatrix,
+  type Threat,
   type TrustBoundary,
 } from '../model/types';
 import { NODE_W } from '../logic/analysis';
 import type { DiagramSuggestion } from '../library/questions';
 import { migrate } from '../io/file';
+import { emptyThreat, nextThreatRef, refreshThreats, type RefreshResult } from '../logic/threats';
+import { catalogVersions } from '../library/frameworks';
 
-export type Step = 'start' | 'intake' | 'architecture' | 'gaps';
+export type Step = 'start' | 'intake' | 'architecture' | 'gaps' | 'objectives' | 'threats' | 'risk' | 'settings';
 export type Selection = { kind: 'component' | 'flow' | 'boundary'; id: string } | null;
 
 export interface Layers {
@@ -56,6 +61,17 @@ interface State {
   clearAnswer(targetId: string, questionId: string): void;
   applyDiagramSuggestion(fromComponentId: string, s: DiagramSuggestion): void;
 
+  updateObjectives(patch: Partial<Objectives>): void;
+
+  refreshThreats(): RefreshResult | null;
+  updateThreat(id: string, patch: Partial<Threat>): void;
+  addCustomThreat(): string;
+  removeThreat(id: string): void;
+  selectedThreat: string | null;
+  selectThreat(id: string | null): void;
+
+  updateRiskMatrix(m: RiskMatrix): void;
+
   select(sel: Selection): void;
   toggleLayer(k: keyof Layers): void;
   setShowAllTiers(v: boolean): void;
@@ -80,7 +96,7 @@ export const useStore = create<State>()(
         showAllTiers: false,
 
         setStep: (step) => set({ step }),
-        load: (a) => set({ assessment: a, selection: null, step: 'intake' }),
+        load: (a) => set({ assessment: a, selection: null, selectedThreat: null, step: 'intake' }),
         startBlank: () => set({ assessment: newAssessment(), selection: null, step: 'intake' }),
         close: () => set({ assessment: null, selection: null, step: 'start' }),
         replaceAssessment: (a) => set({ assessment: touch(a) }),
@@ -160,6 +176,48 @@ export const useStore = create<State>()(
           mutate((x) => ({ ...x, components: [...x.components, c], flows: [...x.flows, f] }));
           set({ selection: { kind: 'component', id: c.id } });
         },
+
+        updateObjectives: (patch) =>
+          mutate((a) => ({ ...a, objectives: { ...a.objectives, ...patch, statements: { ...a.objectives.statements, ...(patch.statements ?? {}) } } })),
+
+        refreshThreats: () => {
+          const a = get().assessment;
+          if (!a) return null;
+          const r = refreshThreats(a);
+          const changed = r.added || r.removed || JSON.stringify(r.threats) !== JSON.stringify(a.threats);
+          if (changed) mutate((x) => ({ ...x, threats: r.threats, frameworkVersions: catalogVersions() }));
+          return r;
+        },
+        updateThreat: (id, patch) =>
+          mutate((a) => ({
+            ...a,
+            threats: a.threats.map((t) => {
+              if (t.id !== id) return t;
+              const scenarioEdit = ['title', 'actor', 'asset', 'objectives', 'preconditions', 'attackPath', 'impact', 'frameworks', 'patterns', 'domain'].some((k) => k in patch);
+              const ratingEdit = 'inherentLikelihood' in patch || 'inherentImpact' in patch;
+              return {
+                ...t,
+                ...patch,
+                edited: t.edited || scenarioEdit,
+                ratingSuggested: ratingEdit ? false : t.ratingSuggested,
+              };
+            }),
+          })),
+        addCustomThreat: () => {
+          const a = get().assessment!;
+          const t = { ...emptyThreat(nextThreatRef(a)), title: 'New threat scenario', edited: true };
+          mutate((x) => ({ ...x, threats: [...x.threats, t] }));
+          set({ selectedThreat: t.id });
+          return t.id;
+        },
+        removeThreat: (id) => {
+          mutate((a) => ({ ...a, threats: a.threats.filter((t) => t.id !== id) }));
+          set({ selectedThreat: null });
+        },
+        selectedThreat: null,
+        selectThreat: (selectedThreat) => set({ selectedThreat }),
+
+        updateRiskMatrix: (m) => mutate((a) => ({ ...a, settings: { ...a.settings, riskMatrix: m } })),
 
         select: (selection) => set({ selection }),
         toggleLayer: (k) => set({ layers: { ...get().layers, [k]: !get().layers[k] } }),

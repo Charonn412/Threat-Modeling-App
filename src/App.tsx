@@ -5,6 +5,10 @@ import { StartPage } from './ui/StartPage';
 import { IntakePage } from './ui/IntakePage';
 import { ArchitecturePage } from './ui/ArchitecturePage';
 import { GapsPage } from './ui/GapsPage';
+import { ObjectivesPage } from './ui/ObjectivesPage';
+import { ThreatsPage } from './ui/ThreatsPage';
+import { RiskPage } from './ui/RiskPage';
+import { SettingsPage } from './ui/SettingsPage';
 import { TIER_LABEL } from './model/types';
 import { useTier } from './ui/hooks';
 
@@ -12,10 +16,11 @@ const STEPS: { id: Step | string; label: string; enabled: boolean }[] = [
   { id: 'intake', label: '1 · Intake', enabled: true },
   { id: 'architecture', label: '2 · Architecture', enabled: true },
   { id: 'gaps', label: 'Gaps', enabled: true },
-  { id: 'objectives', label: '3 · Objectives', enabled: false },
-  { id: 'threats', label: '4 · Threats', enabled: false },
-  { id: 'risk', label: '5 · Risk & treatment', enabled: false },
+  { id: 'objectives', label: '3 · Objectives', enabled: true },
+  { id: 'threats', label: '4 · Threats', enabled: true },
+  { id: 'risk', label: '5–6 · Risk & treatment', enabled: true },
   { id: 'report', label: 'Report', enabled: false },
+  { id: 'settings', label: '⚙', enabled: true },
 ];
 
 export default function App() {
@@ -64,7 +69,8 @@ export default function App() {
               type="button"
               className={`step ${step === s.id ? 'on' : ''}`}
               disabled={!s.enabled}
-              title={s.enabled ? undefined : 'Coming in the next build'}
+              title={s.enabled ? (s.id === 'settings' ? 'Settings' : undefined) : 'Coming in the next build'}
+              aria-label={s.id === 'settings' ? 'Settings' : undefined}
               aria-current={step === s.id ? 'page' : undefined}
               onClick={() => setStep(s.id as Step)}
             >
@@ -86,10 +92,14 @@ export default function App() {
           </button>
         </div>
       </TopBar>
-      <main className={`main ${step === 'architecture' ? '' : 'scroll'}`}>
+      <main className={`main ${step === 'architecture' || step === 'threats' ? '' : 'scroll'}`}>
         {step === 'intake' && <IntakePage />}
         {step === 'architecture' && <ArchitecturePage />}
         {step === 'gaps' && <GapsPage />}
+        {step === 'objectives' && <ObjectivesPage />}
+        {step === 'threats' && <ThreatsPage />}
+        {step === 'risk' && <RiskPage />}
+        {step === 'settings' && <SettingsPage />}
       </main>
     </div>
   );

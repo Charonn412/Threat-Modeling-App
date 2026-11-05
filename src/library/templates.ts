@@ -37,7 +37,7 @@ export interface Template {
   flows: TFlow[];
 }
 
-export const TEMPLATES: Template[] = [
+export const BUILTIN_TEMPLATES: Template[] = [
   {
     id: 'rag-assistant',
     name: 'RAG knowledge assistant',
@@ -125,6 +125,12 @@ export const TEMPLATES: Template[] = [
   },
 ];
 
+// Live binding: replaced when library edits are applied (see registry.ts).
+export let TEMPLATES: Template[] = BUILTIN_TEMPLATES;
+export function _setTemplates(next: Template[]) {
+  TEMPLATES = next;
+}
+
 export function instantiateTemplate(t: Template): Assessment {
   const a = newAssessment();
   a.templateId = t.id;
@@ -144,4 +150,30 @@ export function instantiateTemplate(t: Template): Assessment {
   }
   a.boundaries = t.boundaries.map((b) => newBoundary(b.name, b.kind, { x: b.x, y: b.y, width: b.w, height: b.h }));
   return a;
+}
+
+/** Captures an assessment's architecture as a reusable starter template. */
+export function templateFromAssessment(a: Assessment, id: string, name: string, description: string): Template {
+  const keyOf = new Map(a.components.map((c, i) => [c.id, `c${i + 1}`]));
+  return {
+    id,
+    name,
+    description,
+    intake: {
+      systemTypes: [...a.intake.systemTypes],
+      criticality: a.intake.criticality,
+      autonomy: a.intake.autonomy,
+      exposure: a.intake.exposure,
+      deployment: [...a.intake.deployment],
+    },
+    boundaries: a.boundaries.map((b) => ({ name: b.name, kind: b.kind, x: b.position.x, y: b.position.y, w: b.width, h: b.height })),
+    components: a.components.map((c) => ({ key: keyOf.get(c.id)!, type: c.type, name: c.name, x: c.position.x, y: c.position.y })),
+    flows: a.flows
+      .filter((f) => keyOf.has(f.source) && keyOf.has(f.target))
+      .map((f) => {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { id: _id, source, target, ...rest } = f;
+        return { ...rest, from: keyOf.get(source)!, to: keyOf.get(target)!, label: f.label };
+      }),
+  };
 }

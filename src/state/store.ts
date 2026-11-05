@@ -21,7 +21,7 @@ import { migrate } from '../io/file';
 import { emptyThreat, nextThreatRef, refreshThreats, type RefreshResult } from '../logic/threats';
 import { catalogVersions } from '../library/frameworks';
 
-export type Step = 'start' | 'intake' | 'architecture' | 'gaps' | 'objectives' | 'threats' | 'risk' | 'report' | 'settings';
+export type Step = 'start' | 'intake' | 'architecture' | 'gaps' | 'objectives' | 'threats' | 'risk' | 'report' | 'settings' | 'libraries';
 export type Selection = { kind: 'component' | 'flow' | 'boundary'; id: string } | null;
 
 export interface Layers {

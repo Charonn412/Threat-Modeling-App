@@ -83,6 +83,13 @@ export function StartPage() {
       {error && <p className="warn">{error}</p>}
 
       <h2>Starter templates</h2>
+      <p className="small muted">
+        Templates, questions, threat rules, keywords, patterns and frameworks are editable under{' '}
+        <button type="button" className="link" onClick={() => setStep('libraries')}>
+          📚 Libraries
+        </button>
+        .
+      </p>
       <div className="start-grid">
         {TEMPLATES.map((t) => (
           <button type="button" key={t.id} className="card action template" onClick={() => confirmReplace() && load(instantiateTemplate(t))}>

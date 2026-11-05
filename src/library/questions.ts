@@ -215,9 +215,15 @@ const RAW: Record<AreaId, Omit<Question, 'area'>[]> = {
   ],
 };
 
-export const QUESTIONS: Question[] = (Object.keys(RAW) as AreaId[]).flatMap((area) =>
+export const BUILTIN_QUESTIONS: Question[] = (Object.keys(RAW) as AreaId[]).flatMap((area) =>
   RAW[area].map((qq) => ({ ...qq, area })),
 );
+
+// Live binding: replaced when library edits are applied (see registry.ts).
+export let QUESTIONS: Question[] = BUILTIN_QUESTIONS;
+export function _setQuestions(next: Question[]) {
+  QUESTIONS = next;
+}
 
 const AREA_BY_ID = new Map(AREAS.map((a) => [a.id, a]));
 export const getArea = (id: AreaId) => AREA_BY_ID.get(id)!;

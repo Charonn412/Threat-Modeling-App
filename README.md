@@ -52,12 +52,26 @@ See [`docs/PRODUCT_SPEC.md`](docs/PRODUCT_SPEC.md) for the full design.
     - Gaps and unknowns.
     - Appendix H approval and sign-off.
   - Each section can be switched on or off.
+- **📚 Libraries (in-app editing, spec §4)**
+  - Edit, add, disable or restore the content the app runs on:
+    - Threat rules: conditions, scenario text, framework mappings, patterns, rating signals, and a live count of matches in the open assessment.
+    - Appendix B questions: text, tier, kind and diagram suggestions.
+    - Component types.
+    - Description keywords, with a "try it" box.
+    - Secure patterns.
+    - Templates: save the open assessment's architecture as a template.
+    - Frameworks: edit OWASP lists, add your own control standard, and **import official MITRE ATT&CK (STIX) or ATLAS (YAML) releases**. The import shows a diff and lists the rules and threats that map to removed IDs.
+  - Edits overlay the built-in library, so built-ins can always be restored.
+  - Edits are saved in this browser. Export or import them as a **library pack** (JSON) to back them up or share them with a team.
+  - A health check flags broken references, such as a rule mapped to a technique a new release removed.
 - **Settings**
   - A configurable risk matrix: rename levels and click cells to change ratings.
   - The framework catalog versions, and the versions this assessment was assessed against.
 - **Saving:** autosaves to browser storage. **Save file / Open** exports and imports the full assessment as JSON.
 
-Planned next: in-app editing of libraries (questions, rules, lexicon, templates, framework imports), then Stage 7 validation and evidence tracking (Appendix G).
+Planned next: Stage 7 validation and evidence tracking (Appendix G).
+
+Note: an assessment that uses custom component types or rules needs the same library pack on the machine that opens it. Share the pack alongside the `.tm.json` file.
 
 ## Framework data
 
@@ -69,6 +83,8 @@ MITRE ATLAS and ATT&CK catalogs in `src/library/frameworks/*.json` are generated
 python3 -I scripts/extract_frameworks.py ATLAS-<version>.yaml enterprise-attack.json src/library/frameworks
 npm test   # fails if any threat rule references an ID that no longer exists
 ```
+
+The same releases can also be imported in the app (📚 Libraries → Frameworks) without rebuilding.
 
 ## Development
 

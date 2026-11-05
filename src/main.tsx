@@ -1,5 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+// Load saved library edits before anything renders.
+import './library/registry';
 import App from './App';
 import './styles.css';
 

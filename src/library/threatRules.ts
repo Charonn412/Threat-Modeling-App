@@ -90,7 +90,7 @@ const TOOLS = ['tool_connector', 'mcp_server'];
 const AGENTS = ['agent', 'orchestrator'];
 const STORES = ['database', 'object_storage', 'vector_store', 'cache', 'memory_store'];
 
-export const THREAT_RULES: ThreatRule[] = [
+export const BUILTIN_THREAT_RULES: ThreatRule[] = [
   // ── Prompt injection ────────────────────────────────────────────────
   {
     id: 'PI-DIRECT',
@@ -1077,3 +1077,9 @@ export const THREAT_RULES: ThreatRule[] = [
     impactLevel: 2,
   },
 ];
+
+// Live binding: replaced when library edits are applied (see registry.ts).
+export let THREAT_RULES: ThreatRule[] = BUILTIN_THREAT_RULES;
+export function _setThreatRules(next: ThreatRule[]) {
+  THREAT_RULES = next;
+}

@@ -9,7 +9,7 @@ export interface Pattern {
   asvs: string[];
 }
 
-export const PATTERNS: Pattern[] = [
+export const BUILTIN_PATTERNS: Pattern[] = [
   { id: 'policy-outside-model', name: 'Policy enforcement outside the model', outcome: 'A deterministic policy service decides whether an action is allowed using authenticated identity, resource, action, context and risk. The model may recommend but cannot grant authority.', asvs: ['V8 Authorization'] },
   { id: 'capability-tools', name: 'Capability-based tool access', outcome: 'Expose narrow task-specific tools; separate read/write; scope credentials and resources; allowlist operations and destinations; avoid general-purpose admin tools.', asvs: ['V8 Authorization', 'V4 API and Web Service'] },
   { id: 'approval-bound', name: 'Human approval bound to payload', outcome: 'Approval is bound to the exact action, target, parameters, amount and expiry. Any material change invalidates approval. Approval is recorded and independently enforced.', asvs: ['V2 Validation and Business Logic'] },
@@ -32,5 +32,11 @@ export const PATTERNS: Pattern[] = [
   { id: 'input-validation', name: 'Input validation and output encoding', outcome: 'Validate type, length, encoding and schema on every input; encode outputs for their context; parameterize queries.', asvs: ['V1 Encoding and Sanitization', 'V2 Validation and Business Logic', 'V5 File Handling'] },
 ];
 
-const BY_ID = new Map(PATTERNS.map((p) => [p.id, p]));
+// Live binding: replaced when library edits are applied (see registry.ts).
+export let PATTERNS: Pattern[] = BUILTIN_PATTERNS;
+let BY_ID = new Map(PATTERNS.map((p) => [p.id, p]));
 export const getPattern = (id: string) => BY_ID.get(id);
+export function _setPatterns(next: Pattern[]) {
+  PATTERNS = next;
+  BY_ID = new Map(next.map((p) => [p.id, p]));
+}

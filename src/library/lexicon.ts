@@ -37,7 +37,7 @@ const g = (id: string, patterns: string[], type: string, extra: Partial<LexiconE
 
 const GENAI = { systemTypes: ['genai'] };
 
-export const LEXICON: LexiconEntry[] = [
+export const BUILTIN_LEXICON: LexiconEntry[] = [
   // Models: hosting platforms
   e('bedrock', ['aws bedrock', 'amazon bedrock', 'bedrock'], 'model_endpoint', { name: 'AWS Bedrock model', provider: 'AWS Bedrock', confidence: 'high', platform: true, ...GENAI }),
   e('azure-openai', ['azure openai', 'azure ai foundry', 'azure ai studio'], 'model_endpoint', { name: 'Azure OpenAI model', provider: 'Azure OpenAI', confidence: 'high', platform: true, ...GENAI }),
@@ -117,3 +117,9 @@ export const LEXICON: LexiconEntry[] = [
   e('records', ['updates? (?:to )?(?:\\w+ )?records', 'creates? (?:\\w+ )?(?:records|accounts)', 'modif(?:y|ies) (?:records|data)', 'writes? to'], 'downstream_action', { name: 'Record change' }),
   e('access', ['grants? access', 'provision(?:s|ing)? (?:users|accounts|access)', 'resets? passwords?'], 'downstream_action', { name: 'Access change', confidence: 'high' }),
 ];
+
+// Live binding: replaced when library edits are applied (see registry.ts).
+export let LEXICON: LexiconEntry[] = BUILTIN_LEXICON;
+export function _setLexicon(next: LexiconEntry[]) {
+  LEXICON = next;
+}

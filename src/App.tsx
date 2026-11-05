@@ -10,6 +10,7 @@ import { ThreatsPage } from './ui/ThreatsPage';
 import { RiskPage } from './ui/RiskPage';
 import { SettingsPage } from './ui/SettingsPage';
 import { ReportPage } from './ui/ReportPage';
+import { LibrariesPage } from './ui/library/LibrariesPage';
 import { TIER_LABEL } from './model/types';
 import { useTier } from './ui/hooks';
 
@@ -21,6 +22,7 @@ const STEPS: { id: Step | string; label: string; enabled: boolean }[] = [
   { id: 'threats', label: '4 · Threats', enabled: true },
   { id: 'risk', label: '5–6 · Risk & treatment', enabled: true },
   { id: 'report', label: '7 · Report', enabled: true },
+  { id: 'libraries', label: '📚', enabled: true },
   { id: 'settings', label: '⚙', enabled: true },
 ];
 
@@ -31,13 +33,21 @@ export default function App() {
   const load = useStore((s) => s.load);
   const [msg, setMsg] = useState('');
 
-  if (!assessment || step === 'start') {
+  if (!assessment || step === 'start' || (step === 'libraries' && !assessment)) {
+    const libs = step === 'libraries';
     return (
       <div className="app">
-        <TopBar />
-        <main className="main scroll">
-          <StartPage />
-        </main>
+        <TopBar>
+          <nav className="steps">
+            <button type="button" className={`step ${!libs ? 'on' : ''}`} onClick={() => setStep('start')}>
+              Home
+            </button>
+            <button type="button" className={`step ${libs ? 'on' : ''}`} onClick={() => setStep('libraries')}>
+              📚 Libraries
+            </button>
+          </nav>
+        </TopBar>
+        <main className={`main ${libs ? '' : 'scroll'}`}>{libs ? <LibrariesPage /> : <StartPage />}</main>
       </div>
     );
   }
@@ -70,8 +80,8 @@ export default function App() {
               type="button"
               className={`step ${step === s.id ? 'on' : ''}`}
               disabled={!s.enabled}
-              title={s.enabled ? (s.id === 'settings' ? 'Settings' : undefined) : 'Coming in the next build'}
-              aria-label={s.id === 'settings' ? 'Settings' : undefined}
+              title={s.enabled ? (s.id === 'settings' ? 'Settings' : s.id === 'libraries' ? 'Libraries' : undefined) : 'Coming in the next build'}
+              aria-label={s.id === 'settings' ? 'Settings' : s.id === 'libraries' ? 'Libraries' : undefined}
               aria-current={step === s.id ? 'page' : undefined}
               onClick={() => setStep(s.id as Step)}
             >
@@ -93,7 +103,7 @@ export default function App() {
           </button>
         </div>
       </TopBar>
-      <main className={`main ${step === 'architecture' || step === 'threats' || step === 'report' ? '' : 'scroll'}`}>
+      <main className={`main ${step === 'architecture' || step === 'threats' || step === 'report' || step === 'libraries' ? '' : 'scroll'}`}>
         {step === 'intake' && <IntakePage />}
         {step === 'architecture' && <ArchitecturePage />}
         {step === 'gaps' && <GapsPage />}
@@ -102,6 +112,7 @@ export default function App() {
         {step === 'risk' && <RiskPage />}
         {step === 'report' && <ReportPage />}
         {step === 'settings' && <SettingsPage />}
+        {step === 'libraries' && <LibrariesPage />}
       </main>
     </div>
   );

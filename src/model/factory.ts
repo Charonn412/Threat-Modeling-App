@@ -87,6 +87,6 @@ export function newAssessment(): Assessment {
     threats: [],
     settings: { riskMatrix: defaultRiskMatrix() },
     signOff: emptySignOff(),
-    frameworkVersions: { ...DEFAULT_FRAMEWORK_VERSIONS },
+    frameworkVersions: catalogVersions(),
   };
 }

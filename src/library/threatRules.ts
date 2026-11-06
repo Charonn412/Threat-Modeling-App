@@ -1,4 +1,4 @@
-import type { AnswerStatus, BoundaryKind, ContentOrigin, FrameworkRef, Intake, Level, ObjectiveId, Plane } from '../model/types';
+import type { AnswerStatus, BoundaryKind, ContentOrigin, DataClass, FrameworkRef, Intake, Level, ObjectiveId, Plane } from '../model/types';
 
 /**
  * Threat rule library (Appendix C domains). Rules are declarative data so they
@@ -41,6 +41,8 @@ export type Cond =
   | { kind: 'connected'; types: string[]; direction: 'in' | 'out' | 'any' }
   | { kind: 'intake'; field: keyof Intake; in: string[] }
   | { kind: 'answer'; q: string; in: AnswerStatus[] }
+  | { kind: 'data'; min: DataClass } // component holds / flow carries at least this sensitivity
+  | { kind: 'dataAboveApproval' } // component receives data above its own classification
   | { kind: 'any'; conds: Cond[] }
   | { kind: 'all'; conds: Cond[] }
   | { kind: 'not'; cond: Cond };
@@ -901,6 +903,42 @@ export const BUILTIN_THREAT_RULES: ThreatRule[] = [
       { q: 'B15.2', in: ['no'], note: 'B15.2: cannot quickly pause/disable/revoke/rollback', bump: 2 },
       { q: 'B15.4', in: ['no'], note: 'B15.4: logs not tamper-resistant' },
     ],
+  },
+
+  // ── Data sensitivity (propagated along flows) ───────────────────────
+  {
+    id: 'DATA-ABOVE-APPROVAL',
+    domain: 'data-disclosure',
+    scope: 'component',
+    when: [{ kind: 'dataAboveApproval' }],
+    title: '{name} receives data above its approved classification',
+    actor: 'Insider or attacker with access to {name}',
+    asset: 'Sensitive data copied into a less-protected component',
+    objectives: ['confidentiality', 'privacy'],
+    preconditions: '{name} is approved for a lower classification than the data that flows into it, so its access control, retention and monitoring are not designed for that data.',
+    attackPath: '1. More sensitive data (prompts, retrieved records, outputs) flows into {name}.\n2. {name} applies controls sized for its lower classification (broader access, longer retention, weaker logging).\n3. The data is read, retained or exported outside its intended protection.',
+    impact: 'Sensitive data exposed through a component that was never approved to hold it.',
+    tags: t('owasp-llm:LLM02', 'owasp-top10:A01', 'owasp-top10:A04', 'attack:T1530', 'stride:I'),
+    patterns: ['data-minimization', 'rag-authz'],
+    likelihood: 3,
+    impactLevel: 3,
+  },
+  {
+    id: 'DATA-THIRD-PARTY',
+    domain: 'data-disclosure',
+    scope: 'flow',
+    when: [{ kind: 'flow', target: ['third_party_service', 'browser_automation', 'mcp_server'] }, { kind: 'data', min: 'confidential' }],
+    title: 'Sensitive data sent from {src} to third party {dst}',
+    actor: 'Third party, its subprocessors, or an attacker who compromises them',
+    asset: 'Confidential or restricted data shared outside the organization',
+    objectives: ['confidentiality', 'privacy'],
+    preconditions: 'Confidential or restricted data reaches {dst} without a data-processing agreement, minimization or redaction.',
+    attackPath: '1. {src} passes sensitive data to {dst} (as context, tool arguments or search queries).\n2. {dst} logs, retains or forwards it under its own terms.\n3. The data is exposed through the third party.',
+    impact: 'Regulatory, contractual and confidentiality impact outside organizational control.',
+    tags: t('owasp-llm:LLM02', 'owasp-api:API10', 'owasp-nhi:NHI3', 'attack:T1567', 'stride:I'),
+    patterns: ['data-minimization', 'supply-chain'],
+    likelihood: 3,
+    impactLevel: 3,
   },
 
   // ── Traditional application & cloud ─────────────────────────────────

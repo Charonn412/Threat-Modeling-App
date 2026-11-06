@@ -7,7 +7,8 @@ import { DOMAINS } from '../library/threatRules';
 import { computeGaps, completeness, crossedBoundaries, membership, missingFlowLabels } from '../logic/analysis';
 import { autonomyReach, rating } from '../logic/risk';
 import { narrative } from '../logic/threats';
-import { classify, overallPosture } from '../logic/posture';
+import { classify, overallPosture, weakAnswers } from '../logic/posture';
+import { CLASS_LABEL, dataExposures, EXPOSURE_LABEL, propagate } from '../logic/dataflow';
 import { definitionOfDone, threatEvidence, verification, VERIFICATION_LABEL } from '../logic/controls';
 import { computeTier } from '../logic/tier';
 import {
@@ -130,6 +131,7 @@ export function buildReport(a: Assessment, opts: ReportOptions = defaultReportOp
   const gaps = computeGaps(a, tier.tier);
   const comp = completeness(a, tier.tier);
   const posture = overallPosture(a);
+  const dm = propagate(a);
   const generated = (opts.generatedAt ?? new Date()).toISOString().slice(0, 10);
   const decision = a.signOff.decision ? DECISION_LABEL[a.signOff.decision] : 'Not yet decided';
   let n = 0;
@@ -263,7 +265,10 @@ export function buildReport(a: Assessment, opts: ReportOptions = defaultReportOp
           nums.get(f.id)!,
           `${byId.get(f.source)?.name ?? '?'} → ${byId.get(f.target)?.name ?? '?'}${f.plane === 'control' ? ' (control)' : ''}`,
           dash(f.label),
-          dash(f.dataClassification),
+          (() => {
+            const c = dm.carried.get(f.id);
+            return c?.level ? `${CLASS_LABEL[c.level]}${c.inferred ? ' (inferred)' : ''}` : '—';
+          })(),
           dash(f.protocol),
           dash([f.authN, f.authZContext].filter(Boolean).join(' / ')),
           dash(f.encrypted),
@@ -491,6 +496,30 @@ export function buildReport(a: Assessment, opts: ReportOptions = defaultReportOp
   // ── Gaps ─────────────────────────────────────────────────────────────
   if (on('gaps')) {
     b.push({ t: 'h1', text: section('gaps') });
+    const exposures = dataExposures(a, dm);
+    b.push({ t: 'h3', text: `Data exposure (${exposures.length})` });
+    b.push(
+      exposures.length
+        ? {
+            t: 'table',
+            head: ['Finding', 'Level', 'Detail'],
+            rows: exposures.map((x) => [EXPOSURE_LABEL[x.kind], CLASS_LABEL[x.level], x.detail]),
+            widths: [3, 1.2, 5],
+            small: true,
+          }
+        : { t: 'p', text: 'No sensitive-data exposures detected from flow classification.' },
+    );
+    const weak = weakAnswers(a);
+    if (weak.length) {
+      b.push({ t: 'h3', text: `Weak answers (${weak.length})` });
+      b.push({
+        t: 'table',
+        head: ['Component', 'Finding', 'Note'],
+        rows: weak.map((w) => [w.component.name, `${w.question.id} ${w.question.text} (${STATUS_LABEL[w.answer.status]})`, dash(w.answer.note)]),
+        widths: [2, 5, 3],
+        small: true,
+      });
+    }
     const unknown = gaps.filter((g) => g.kind === 'unknown');
     b.push({ t: 'h3', text: `Unknowns (${unknown.length})` });
     b.push(

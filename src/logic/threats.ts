@@ -4,6 +4,7 @@ import { uid } from '../model/factory';
 import { crossedBoundaries, membership } from './analysis';
 import { autonomyReach, clampLevel } from './risk';
 import { classify } from './posture';
+import { CLASS_LABEL, CLASS_RANK, propagate, received, type DataModel } from './dataflow';
 import { questionsForAreas } from '../library/questions';
 import { getComponentType } from '../library/catalog';
 import type { AreaId } from '../model/types';
@@ -28,6 +29,7 @@ const DOMAIN_AREAS: Record<string, AreaId[]> = {
 
 interface Ctx {
   a: Assessment;
+  dm: DataModel;
   byId: Map<string, Component>;
   members: Map<string, string[]>;
   boundaryKind: Map<string, string>;
@@ -39,6 +41,7 @@ type Subject = { kind: 'component'; c: Component } | { kind: 'flow'; f: Flow } |
 function makeCtx(a: Assessment): Ctx {
   return {
     a,
+    dm: propagate(a),
     byId: new Map(a.components.map((c) => [c.id, c])),
     members: membership(a),
     boundaryKind: new Map(a.boundaries.map((b) => [b.id, b.kind])),
@@ -63,6 +66,14 @@ function evalCond(cond: Cond, ctx: Ctx, s: Subject): boolean {
     case 'intake': {
       const v = ctx.a.intake[cond.field];
       return Array.isArray(v) ? v.some((x) => cond.in.includes(String(x))) : cond.in.includes(String(v));
+    }
+    case 'data': {
+      const lv = s.kind === 'component' ? ctx.dm.held.get(s.c.id)?.level : s.kind === 'flow' ? ctx.dm.carried.get(s.f.id)?.level : undefined;
+      return !!lv && CLASS_RANK[lv] >= CLASS_RANK[cond.min];
+    }
+    case 'dataAboveApproval': {
+      if (s.kind !== 'component' || !s.c.classification) return false;
+      return CLASS_RANK[received(ctx.a, ctx.dm, s.c.id)] > CLASS_RANK[s.c.classification];
     }
     case 'answer': {
       if (s.kind !== 'component') return false;
@@ -150,7 +161,7 @@ export interface SuggestedRating {
 }
 
 /** Suggested inherent rating from the rule baseline, Appendix B answers and intake. Analysts adjust it. */
-export function suggestRating(a: Assessment, rule: ThreatRule, componentIds: string[]): SuggestedRating {
+export function suggestRating(a: Assessment, rule: ThreatRule, componentIds: string[], flowIds: string[] = []): SuggestedRating {
   const why: string[] = [`Baseline for rule ${rule.id}: likelihood ${rule.likelihood}, impact ${rule.impactLevel}.`];
   const signals: string[] = [];
   let l = rule.likelihood as number;
@@ -195,9 +206,16 @@ export function suggestRating(a: Assessment, rule: ThreatRule, componentIds: str
   }
 
   const conf = rule.objectives.some((o) => o === 'confidentiality' || o === 'privacy');
-  if (conf && (a.intake.dataSensitivity === 'confidential' || a.intake.dataSensitivity === 'restricted')) {
-    i += 1;
-    why.push(`Impact +1: ${a.intake.dataSensitivity} data in scope.`);
+  if (conf) {
+    // Prefer the sensitivity actually on this flow / at these components; fall back to the intake.
+    const dm = propagate(a);
+    const levels = flowIds.length ? flowIds.map((id) => dm.carried.get(id)?.level ?? '') : componentIds.map((id) => dm.held.get(id)?.level ?? '');
+    const local = levels.reduce((m, l) => (CLASS_RANK[l] > CLASS_RANK[m] ? l : m), '' as (typeof levels)[number]);
+    const level = local || a.intake.dataSensitivity;
+    if (level === 'confidential' || level === 'restricted') {
+      i += 1;
+      why.push(`Impact +1: ${CLASS_LABEL[level]} data ${local ? (flowIds.length ? 'on this flow' : 'handled here') : 'in scope (intake)'}.`);
+    }
   }
   const integ = rule.objectives.some((o) => o === 'integrity' || o === 'safety');
   const regulated = a.intake.regulatedImpact.some((x) => x !== 'none');
@@ -277,7 +295,7 @@ function scenarioFields(c: Candidate) {
 }
 
 export function newThreatFromCandidate(a: Assessment, c: Candidate, ref: string): Threat {
-  const s = suggestRating(a, c.rule, c.componentIds);
+  const s = suggestRating(a, c.rule, c.componentIds, c.flowIds);
   return {
     ...emptyThreat(ref),
     ruleId: c.rule.id,
@@ -337,7 +355,7 @@ export function refreshThreats(a: Assessment, rules: ThreatRule[] = THREAT_RULES
     let next: Threat = { ...t, stale: false, componentIds: cand.componentIds, flowIds: cand.flowIds };
     if (!t.edited) next = { ...next, ...scenarioFields(cand) };
     if (t.ratingSuggested) {
-      const s = suggestRating(a, cand.rule, cand.componentIds);
+      const s = suggestRating(a, cand.rule, cand.componentIds, cand.flowIds);
       next = { ...next, inherentLikelihood: s.likelihood, inherentImpact: s.impact, signals: s.signals, ratingRationale: s.rationale };
     }
     threats.push(next);

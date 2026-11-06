@@ -16,6 +16,7 @@ import '@xyflow/react/dist/style.css';
 import { useStore } from '../state/store';
 import { componentProgress, crossedBoundaries, membership, missingFlowLabels, NODE_W, NODE_H } from '../logic/analysis';
 import { nodeTypes } from './nodes';
+import { propagate } from '../logic/dataflow';
 import { useTier } from './hooks';
 
 export const DND_MIME = 'application/x-tm-component';
@@ -76,6 +77,7 @@ export function Canvas() {
 
   const edges = useMemo<Edge[]>(() => {
     const members = membership(assessment);
+    const dm = propagate(assessment);
     return assessment.flows.map((f) => {
       const crossing = crossedBoundaries(f, members).length > 0;
       const incomplete = missingFlowLabels(f).length > 0;
@@ -84,7 +86,9 @@ export function Canvas() {
       const classes = ['flow', control ? 'control' : 'data', crossing ? 'crossing' : '', incomplete ? 'incomplete' : '', selected ? 'selected' : '']
         .filter(Boolean)
         .join(' ');
-      const label = layers.labels ? `${crossing && incomplete ? '⚠ ' : ''}${f.label || '(unlabeled flow)'}${f.dataClassification ? ` · ${f.dataClassification}` : ''}` : undefined;
+      const carried = dm.carried.get(f.id);
+      const cls = carried?.level ? ` · ${carried.inferred ? '~' : ''}${carried.level}` : '';
+      const label = layers.labels ? `${crossing && incomplete ? '⚠ ' : ''}${f.label || '(unlabeled flow)'}${cls}` : undefined;
       return {
         id: f.id,
         source: f.source,

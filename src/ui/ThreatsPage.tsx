@@ -3,6 +3,8 @@ import { DOMAINS } from '../library/threatRules';
 import { PATTERNS, getPattern } from '../library/patterns';
 import { narrative, type RefreshResult } from '../logic/threats';
 import { threatEvidence, verification } from '../logic/controls';
+import { findAttackPaths, SINK_LABEL, type AttackPath } from '../logic/paths';
+import { atlasMitigationsFor } from '../library/frameworks';
 import { VerificationBadge } from './ValidationPage';
 import { rating } from '../logic/risk';
 import { OBJECTIVE_LABEL, type ObjectiveId, type Threat, type ThreatStatus, type Treatment } from '../model/types';
@@ -29,6 +31,10 @@ export function ThreatsPage() {
   const m = a.settings.riskMatrix;
 
   const [tab, setTab] = useState<ThreatStatus | 'all'>('candidate');
+  const [view, setView] = useState<'scenarios' | 'paths'>('scenarios');
+  const [pathKey, setPathKey] = useState<string | null>(null);
+  const paths = useMemo(() => findAttackPaths(a), [a]);
+  const selectedPath = view === 'paths' ? (paths.find((p) => p.key === pathKey) ?? null) : null;
   const [domain, setDomain] = useState('');
   const [query, setQuery] = useState('');
   const [result, setResult] = useState<RefreshResult | null>(null);
@@ -60,7 +66,7 @@ export function ThreatsPage() {
   };
 
   return (
-    <div className={`threats ${selected ? 'has-selection' : ''}`}>
+    <div className={`threats ${(view === 'paths' ? selectedPath : selected) ? 'has-selection' : ''}`}>
       <aside className="threat-list">
         <div className="tl-head">
           <div className="row between">
@@ -74,6 +80,16 @@ export function ThreatsPage() {
               Last refresh: {result.added} new · {result.stale} now stale · {result.removed} removed
             </p>
           )}
+          <div className="seg view-toggle" role="tablist" aria-label="View">
+            <button type="button" role="tab" aria-selected={view === 'scenarios'} className={`seg-btn ${view === 'scenarios' ? 'on view' : ''}`} onClick={() => setView('scenarios')}>
+              Scenarios
+            </button>
+            <button type="button" role="tab" aria-selected={view === 'paths'} className={`seg-btn ${view === 'paths' ? 'on view' : ''}`} onClick={() => setView('paths')}>
+              Attack paths <span className="count">{paths.length}</span>
+            </button>
+          </div>
+          {view === 'scenarios' && (
+          <>
           <div className="tabs" role="tablist">
             {STATUS_TABS.map((s) => (
               <button key={s.id} type="button" role="tab" aria-selected={tab === s.id} className={`tab ${tab === s.id ? 'on' : ''}`} onClick={() => setTab(s.id)}>
@@ -102,7 +118,42 @@ export function ThreatsPage() {
               </button>
             )}
           </div>
+          </>
+          )}
+          {view === 'paths' && (
+            <p className="small muted">
+              Multi-step chains from attacker-reachable inputs, through an AI component, to a high-impact action, crossing a trust boundary. Add a path as a threat scenario
+              to assess it.
+            </p>
+          )}
         </div>
+        {view === 'paths' ? (
+          <ul className="tl-items">
+            {paths.map((p) => {
+              const added = a.threats.some((t) => t.signature === `PATH:${p.key}`);
+              return (
+                <li key={p.key}>
+                  <button type="button" className={`tl-item ${pathKey === p.key ? 'on' : ''}`} onClick={() => setPathKey(p.key)}>
+                    <span className="row between">
+                      <span className="q-id">{SINK_LABEL[p.category]}</span>
+                      <span className="row">
+                        {added && <span className="badge">added</span>}
+                        <span className={`rating r${p.severity}`}>{m.ratingLabels[p.severity - 1]}</span>
+                      </span>
+                    </span>
+                    <span className="tl-title">{p.steps.map((id) => a.components.find((c) => c.id === id)?.name).join(' → ')}</span>
+                    <span className="small muted">
+                      {p.steps.length - 1} hops · {p.boundaries.length} boundar{p.boundaries.length === 1 ? 'y' : 'ies'}
+                      {p.gated ? ' · approval gate' : ''}
+                      {p.guarded ? ' · guardrail' : ''}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+            {!paths.length && <li className="small muted pad">No attack paths found. Paths need an attacker-reachable source, an AI component and a high-impact sink connected by flows across a trust boundary.</li>}
+          </ul>
+        ) : (
         <ul className="tl-items">
           {list.map((t) => (
             <li key={t.id}>
@@ -126,8 +177,21 @@ export function ThreatsPage() {
             </li>
           )}
         </ul>
+        )}
       </aside>
-      <section className="threat-detail">{selected ? <ThreatEditor t={selected} key={selected.id} /> : <Overview />}</section>
+      <section className="threat-detail">
+        {view === 'paths' ? (
+          selectedPath ? (
+            <PathDetail p={selectedPath} onBack={() => setPathKey(null)} onAdded={() => setView('scenarios')} />
+          ) : (
+            <Overview />
+          )
+        ) : selected ? (
+          <ThreatEditor t={selected} key={selected.id} />
+        ) : (
+          <Overview />
+        )}
+      </section>
     </div>
   );
 }
@@ -315,6 +379,7 @@ function ThreatEditor({ t }: { t: Threat }) {
 
       <h3 className="mt">Framework mappings</h3>
       <FrameworkTags value={t.frameworks} onChange={(v) => set({ frameworks: v })} />
+      <AtlasMitigations t={t} />
 
       <h3 className="mt">Existing controls & inherent risk (Stage 5)</h3>
       <div className="grid2">
@@ -461,5 +526,76 @@ function ControlsForThreat({ t }: { t: Threat }) {
       )}
       {ev.unsupportedReduction && <span className="field-hint warn">The residual rating is lower than inherent, but no linked control is verified yet.</span>}
     </div>
+  );
+}
+
+function PathDetail({ p, onBack, onAdded }: { p: AttackPath; onBack: () => void; onAdded: () => void }) {
+  const a = useStore((s) => s.assessment)!;
+  const addFromPath = useStore((s) => s.addThreatFromPath);
+  const m = a.settings.riskMatrix;
+  const name = (id: string) => a.components.find((c) => c.id === id)?.name ?? '?';
+  const existing = a.threats.find((t) => t.signature === `PATH:${p.key}`);
+  return (
+    <div className="pad-l editor">
+      <button type="button" className="btn small mobile-back" onClick={onBack}>
+        ← All paths
+      </button>
+      <span className="q-id">Attack path</span>
+      <h2 className="row wrap">
+        {SINK_LABEL[p.category]} <span className={`rating r${p.severity}`}>{m.ratingLabels[p.severity - 1]}</span>
+      </h2>
+      <ol className="path-steps">
+        {p.steps.map((id, i) => (
+          <li key={id} className={p.pivots.includes(id) ? 'pivot' : i === p.steps.length - 1 ? 'sink' : i === 0 ? 'source' : ''}>
+            {name(id)}
+            {i === 0 && <span className="badge">attacker input</span>}
+            {p.pivots.includes(id) && <span className="badge">AI interprets content</span>}
+            {i === p.steps.length - 1 && <span className="badge warn-b">impact</span>}
+          </li>
+        ))}
+      </ol>
+      <p className="small">
+        Crosses: {p.boundaries.map((b) => a.boundaries.find((x) => x.id === b)?.name).join(', ')}
+        {p.dataLevel && ` · ${p.dataLevel} data on the path`}
+      </p>
+      <p className="small muted">
+        {p.gated ? 'An approval gate is on this path, which lowers the severity. Confirm the approval is bound to the exact payload (Appendix D).' : 'No approval gate on this path: nothing deterministic stops the final action.'}
+        {p.guarded ? ' A guardrail is on the path. Guardrails reduce likelihood but are not a security boundary.' : ''}
+      </p>
+      {existing ? (
+        <button type="button" className="btn small" onClick={() => { useStore.getState().selectThreat(existing.id); onAdded(); }}>
+          Open {existing.ref}
+        </button>
+      ) : (
+        <button type="button" className="btn small primary" onClick={() => { addFromPath(p); onAdded(); }}>
+          Add as threat scenario
+        </button>
+      )}
+    </div>
+  );
+}
+
+function AtlasMitigations({ t }: { t: Threat }) {
+  const items = atlasMitigationsFor(t.frameworks.filter((f) => f.fw === 'atlas').map((f) => f.id));
+  if (!items.length) return null;
+  return (
+    <details className="sub-card small">
+      <summary>
+        <strong>MITRE ATLAS mitigations</strong> for the mapped techniques ({items.length})
+      </summary>
+      <ul className="plain">
+        {items.map(({ mitigation: m, how }) => (
+          <li key={m.id} className="mitigation">
+            <span className="q-id">{m.id}</span> <strong>{m.name}</strong>
+            {m.categories.length > 0 && <span className="muted"> · {m.categories.join(', ')}</span>}
+            {how.slice(0, 2).map((h) => (
+              <div key={h} className="muted">
+                {h}
+              </div>
+            ))}
+          </li>
+        ))}
+      </ul>
+    </details>
   );
 }

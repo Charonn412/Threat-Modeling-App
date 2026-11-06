@@ -9,6 +9,15 @@ export interface CatalogItem {
   tactics?: string[];
 }
 
+export interface Mitigation {
+  id: string;
+  name: string;
+  summary: string;
+  categories: string[];
+  /** Techniques this mitigates, with technique-specific guidance. */
+  techniques: { id: string; how: string }[];
+}
+
 export interface Catalog {
   id: string;
   name: string;
@@ -17,6 +26,8 @@ export interface Catalog {
   kind: 'ai' | 'traditional';
   source: string;
   items: CatalogItem[];
+  /** Official mitigations, where the framework publishes them (MITRE ATLAS). */
+  mitigations?: Mitigation[];
 }
 
 const items = (pairs: [string, string][]): CatalogItem[] => pairs.map(([id, name]) => ({ id, name }));

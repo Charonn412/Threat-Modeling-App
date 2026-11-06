@@ -4,14 +4,18 @@ import type { Block, Cell } from '../report/blocks';
 import { DECISION_LABEL, REASSESSMENT_TRIGGERS, type Decision, type SignOff } from '../model/types';
 import { definitionOfDone } from '../logic/controls';
 import { useTier } from './hooks';
+import { getVersion, listVersions } from '../state/workspace';
+import { VersionsPanel } from './VersionsPanel';
 import { useStore } from '../state/store';
 import { Field, TextArea, TextInput } from './controls';
-import { downloadBlob, fileBase } from '../io/file';
+import { downloadBlob, downloadText, fileBase } from '../io/file';
+import { controlsCsv, jiraCsv, riskRegisterCsv } from '../io/csv';
 
 export function ReportPage() {
   const a = useStore((s) => s.assessment)!;
   const update = useStore((s) => s.updateSignOff);
   const [opts, setOpts] = useState<ReportOptions>(defaultReportOptions);
+  const [baselineId, setBaselineId] = useState('');
   const [busy, setBusy] = useState<'' | 'pdf' | 'docx'>('');
   const [error, setError] = useState('');
   const blocks = useMemo(() => buildReport(a, opts), [a, opts]);
@@ -63,6 +67,22 @@ export function ReportPage() {
             🖨 Print
           </button>
           {error && <p className="small warn">{error}</p>}
+          <div className="row gap wrap">
+            <button type="button" className="btn small" onClick={() => downloadText(`${fileBase(a)}-risk-register.csv`, riskRegisterCsv(a), 'text/csv')}>
+              Risk register (CSV)
+            </button>
+            <button type="button" className="btn small" onClick={() => downloadText(`${fileBase(a)}-controls.csv`, controlsCsv(a), 'text/csv')}>
+              Controls & tests (CSV)
+            </button>
+            <button
+              type="button"
+              className="btn small"
+              title="Import in Jira: System → External system import → CSV. One issue per unverified control and per untreated threat."
+              onClick={() => downloadText(`${fileBase(a)}-jira-import.csv`, jiraCsv(a), 'text/csv')}
+            >
+              Jira import (CSV)
+            </button>
+          </div>
           <p className="small muted">Generated in your browser. Nothing is uploaded.</p>
         </div>
 
@@ -77,6 +97,12 @@ export function ReportPage() {
             </li>
           ))}
         </ul>
+
+        <VersionsPanel baselineId={opts.baseline ? baselineId : ''} onBaseline={(id) => {
+          setBaselineId(id);
+          const v = id ? listVersions(a.id).find((x) => x.id === id) : undefined;
+          setOpts({ ...opts, baseline: v ? { label: v.label, createdAt: v.createdAt, data: getVersion(a.id, v.id)! } : undefined });
+        }} />
 
         <h3 className="mt">Sections</h3>
         {SECTIONS.map((sec) => (

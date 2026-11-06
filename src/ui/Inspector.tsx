@@ -7,6 +7,8 @@ import { DATA_CLASS_OPTIONS, Field, Progress, Select, TextArea, TextInput } from
 import { QuestionList } from './QuestionList';
 import { BOUNDARY_KIND_OPTIONS, CONTENT_ORIGIN_OPTIONS, PLANE_OPTIONS, TRUST_OPTIONS, YNU_OPTIONS } from './labels';
 import { useTier } from './hooks';
+import { componentPosture, overallPosture, type Posture } from '../logic/posture';
+import { CLASS_LABEL, CLASS_RANK, heldLevel, propagate, received } from '../logic/dataflow';
 
 export function Inspector() {
   const selection = useStore((s) => s.selection);
@@ -37,6 +39,7 @@ function Summary() {
         Assurance tier: <strong>{TIER_LABEL[tier]}</strong>
       </p>
       <Progress value={c.percent} />
+      <PostureLine p={overallPosture(a)} label="Overall security posture" />
       <p className="small">
         {c.percent}% complete · {c.questionsAnswered}/{c.questionsTotal} questions answered · {c.unknowns} unknown · {c.flowsLabeled}/{c.flowsTotal} flows fully
         labeled · {c.crossingFlows} boundary-crossing flows
@@ -60,6 +63,13 @@ function ComponentInspector({ c }: { c: Component }) {
   const answers = useStore((s) => s.assessment!.answers);
   const t = getComponentType(c.type);
   const set = (patch: Partial<Component>) => update(c.id, patch);
+  const fullA = useStore((s) => s.assessment)!;
+  const dm = propagate(fullA);
+  const held = heldLevel(dm, c);
+  const rec = received(fullA, dm, c.id);
+  const heldHint = held.level
+    ? `Handles ${CLASS_LABEL[held.level]} data (${held.basis === 'labeled' ? 'as labeled' : held.basis === 'intake' ? 'from intake data sensitivity' : `inherited from ${fullA.components.find((x) => x.id === held.from)?.name ?? 'an inbound flow'}`}).${c.classification && CLASS_RANK[rec] > CLASS_RANK[c.classification] ? ` Warning: receives ${CLASS_LABEL[rec]} data, above its approved level.` : ''}`
+    : 'Set the classification this component is approved to handle.';
 
   const onDelete = () => {
     const n = Object.keys(answers).filter((k) => k.startsWith(`${c.id}::`)).length;
@@ -93,7 +103,7 @@ function ComponentInspector({ c }: { c: Component }) {
         <Field label="Environment & region">
           <TextInput value={c.environment} onChange={(v) => set({ environment: v })} />
         </Field>
-        <Field label="Data classification">
+        <Field label="Approved data classification" hint={heldHint}>
           <Select value={c.classification} onChange={(v) => set({ classification: v })} options={DATA_CLASS_OPTIONS} />
         </Field>
         <Field label="Identity & permissions">
@@ -107,6 +117,7 @@ function ComponentInspector({ c }: { c: Component }) {
         <TextArea value={c.notes} onChange={(v) => set({ notes: v })} rows={2} />
       </Field>
       <h3 className="mt">Appendix B questions</h3>
+      <PostureLine p={componentPosture(useStore.getState().assessment!, c)} label="Posture" />
       <QuestionList component={c} />
     </div>
   );
@@ -121,6 +132,8 @@ function FlowInspector({ f }: { f: Flow }) {
   const dst = a.components.find((c) => c.id === f.target);
   const crossed = crossedBoundaries(f, membership(a));
   const missing = missingFlowLabels(f);
+  const carried = propagate(a).carried.get(f.id);
+  const carriedHint = carried?.inferred && carried.level ? `Inferred: carries ${CLASS_LABEL[carried.level]} data from ${src?.name ?? 'its source'}. Set explicitly to override.` : undefined;
   const boundaryNames = crossed.map((id) => a.boundaries.find((b) => b.id === id)?.name).filter(Boolean);
 
   return (
@@ -140,7 +153,7 @@ function FlowInspector({ f }: { f: Flow }) {
         <TextInput value={f.label} onChange={(v) => set({ label: v })} />
       </Field>
       <div className="grid2">
-        <Field label="Data classification">
+        <Field label="Data classification" hint={carriedHint}>
           <Select value={f.dataClassification} onChange={(v) => set({ dataClassification: v })} options={DATA_CLASS_OPTIONS} />
         </Field>
         <Field label="Protocol">
@@ -210,5 +223,15 @@ function BoundaryInspector({ b }: { b: TrustBoundary }) {
         ))}
       </ul>
     </div>
+  );
+}
+
+function PostureLine({ p, label }: { p: Posture; label: string }) {
+  if (p.score === null) return <p className="small muted">{label}: not yet scored. Answer the questions to compute it.</p>;
+  const cls = p.score >= 80 ? 'ok' : p.score >= 50 ? 'warn' : 'danger-text';
+  return (
+    <p className="small">
+      {label}: <strong className={cls}>{p.score}%</strong> secure · {p.weak} weak · {p.gap} unknown
+    </p>
   );
 }

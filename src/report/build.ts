@@ -1,5 +1,5 @@
 import { getComponentType } from '../library/catalog';
-import { CATALOGS, getCatalog, lookup } from '../library/frameworks';
+import { CATALOGS, atlasMitigationsFor, getCatalog, lookup } from '../library/frameworks';
 import { INTAKE_SECTIONS } from '../library/intake';
 import { getPattern } from '../library/patterns';
 import { QUESTIONS, questionsForAreas } from '../library/questions';
@@ -7,6 +7,10 @@ import { DOMAINS } from '../library/threatRules';
 import { computeGaps, completeness, crossedBoundaries, membership, missingFlowLabels } from '../logic/analysis';
 import { autonomyReach, rating } from '../logic/risk';
 import { narrative } from '../logic/threats';
+import { findAttackPaths, SINK_LABEL } from '../logic/paths';
+import { diffAssessments } from '../logic/diff';
+import { classify, overallPosture, weakAnswers } from '../logic/posture';
+import { CLASS_LABEL, dataExposures, EXPOSURE_LABEL, propagate } from '../logic/dataflow';
 import { definitionOfDone, threatEvidence, verification, VERIFICATION_LABEL } from '../logic/controls';
 import { computeTier } from '../logic/tier';
 import {
@@ -26,10 +30,11 @@ import { BOUNDARY_KIND_LABEL, CONTENT_ORIGIN_OPTIONS, TRUST_OPTIONS } from '../u
 import { RATING_FILL, RATING_TEXT, type Block, type Cell } from './blocks';
 import { flowNumbers, renderArchitectureSvg } from './diagram';
 
-export type SectionId = 'summary' | 'charter' | 'architecture' | 'answers' | 'objectives' | 'threats' | 'register' | 'controls' | 'coverage' | 'gaps' | 'dod' | 'signoff';
+export type SectionId = 'summary' | 'changes' | 'charter' | 'architecture' | 'answers' | 'objectives' | 'threats' | 'register' | 'controls' | 'coverage' | 'gaps' | 'dod' | 'signoff';
 
 export const SECTIONS: { id: SectionId; title: string }[] = [
   { id: 'summary', title: 'Executive summary' },
+  { id: 'changes', title: 'Changes since baseline version' },
   { id: 'charter', title: 'Assessment charter and scope' },
   { id: 'architecture', title: 'Architecture and data flows' },
   { id: 'answers', title: 'Architecture discovery record' },
@@ -48,6 +53,8 @@ export interface ReportOptions {
   includeDismissed: boolean;
   includeUnanswered: boolean;
   generatedAt?: Date;
+  /** Earlier version to compare against (Stage 9 reassessment). */
+  baseline?: { label: string; createdAt: string; data: Assessment };
 }
 
 export const defaultReportOptions = (): ReportOptions => ({
@@ -57,7 +64,8 @@ export const defaultReportOptions = (): ReportOptions => ({
 });
 
 const STATUS_LABEL = { yes: 'Yes', no: 'No', na: 'N/A', unknown: 'Unknown' } as const;
-const STATUS_FILL: Record<string, string> = { yes: '#d3f9d8', no: '#ffe8cc', na: '#e9ecef', unknown: '#ffe3e3' };
+/** Answer cells are colored by what they mean for security, not by Yes/No. */
+const FINDING_FILL: Record<string, string> = { secure: '#d3f9d8', weak: '#ffc9c9', gap: '#fff3bf', na: '#e9ecef', info: '#e7f5ff' };
 const DOMAIN_NAME = new Map(DOMAINS.map((d) => [d.id, d.name]));
 const ORIGIN = new Map(CONTENT_ORIGIN_OPTIONS.map((o) => [o.value, o.label]));
 const TRUST = new Map(TRUST_OPTIONS.map((o) => [o.value, o.label]));
@@ -127,6 +135,8 @@ export function buildReport(a: Assessment, opts: ReportOptions = defaultReportOp
   const members = membership(a);
   const gaps = computeGaps(a, tier.tier);
   const comp = completeness(a, tier.tier);
+  const posture = overallPosture(a);
+  const dm = propagate(a);
   const generated = (opts.generatedAt ?? new Date()).toISOString().slice(0, 10);
   const decision = a.signOff.decision ? DECISION_LABEL[a.signOff.decision] : 'Not yet decided';
   let n = 0;
@@ -165,7 +175,8 @@ export function buildReport(a: Assessment, opts: ReportOptions = defaultReportOp
         `(${comp.crossingFlows} ${plural(comp.crossingFlows, 'flow crosses', 'flows cross')} a boundary). ${confirmed.length} threat ${plural(confirmed.length, 'scenario was', 'scenarios were')} confirmed` +
         (dismissed.length ? `, ${dismissed.length} ${plural(dismissed.length, 'was', 'were')} dismissed with rationale` : '') +
         (candidates.length ? `, and ${candidates.length} ${plural(candidates.length, 'candidate is', 'candidates are')} still awaiting review` : '') +
-        `. Current decision: ${decision}.`,
+        `. Current decision: ${decision}.` +
+        (posture.score !== null ? ` Architecture posture from Appendix B answers: ${posture.score}% secure (${posture.weak} weak ${plural(posture.weak, 'answer', 'answers')}, ${posture.gap} unknown).` : ''),
     });
     b.push({
       t: 'table',
@@ -187,6 +198,7 @@ export function buildReport(a: Assessment, opts: ReportOptions = defaultReportOp
       });
     }
     const keyItems: string[] = [];
+    if (posture.weak) keyItems.push(`${posture.weak} Appendix B ${plural(posture.weak, 'answer indicates', 'answers indicate')} a security weakness (see the discovery record).`);
     if (unknowns) keyItems.push(`${unknowns} architecture ${plural(unknowns, 'question is', 'questions are')} marked Unknown (tracked gaps).`);
     if (candidates.length) keyItems.push(`${candidates.length} generated threat ${plural(candidates.length, 'candidate has', 'candidates have')} not been reviewed.`);
     const untreated = confirmed.filter((t) => !t.treatment).length;
@@ -207,6 +219,28 @@ export function buildReport(a: Assessment, opts: ReportOptions = defaultReportOp
       b.push({ t: 'h3', text: 'Key open items' });
       b.push({ t: 'list', items: keyItems });
     }
+  }
+
+  // ── Changes since baseline (Stage 9) ────────────────────────────────
+  if (on('changes') && opts.baseline) {
+    const d = diffAssessments(opts.baseline.data, a);
+    n += 1;
+    b.push({ t: 'h1', text: `${n}. Changes since ${opts.baseline.label}` });
+    b.push({ t: 'p', text: `Compared with version "${opts.baseline.label}" saved ${opts.baseline.createdAt.slice(0, 10)}.`, style: 'muted' });
+    if (d.triggers.length) {
+      b.push({ t: 'h3', text: 'Reassessment triggers hit (Section 13)' });
+      b.push({ t: 'table', head: ['Trigger', 'Because'], rows: d.triggers.map((t) => [t.label, t.because.join('; ')]), widths: [4, 5], small: true });
+    } else b.push({ t: 'p', text: 'No Section 13 reassessment triggers were hit by these changes.' });
+    if (d.changes.length) {
+      b.push({ t: 'h3', text: `Changes (${d.changes.length})` });
+      b.push({
+        t: 'table',
+        head: ['Area', 'Change', 'Item', 'Detail'],
+        rows: d.changes.map((c) => [capital(c.area), capital(c.kind), c.label, dash(c.detail)]),
+        widths: [1.2, 1, 3.5, 4],
+        small: true,
+      });
+    } else b.push({ t: 'p', text: 'No changes.' });
   }
 
   // ── Charter ──────────────────────────────────────────────────────────
@@ -258,7 +292,10 @@ export function buildReport(a: Assessment, opts: ReportOptions = defaultReportOp
           nums.get(f.id)!,
           `${byId.get(f.source)?.name ?? '?'} → ${byId.get(f.target)?.name ?? '?'}${f.plane === 'control' ? ' (control)' : ''}`,
           dash(f.label),
-          dash(f.dataClassification),
+          (() => {
+            const c = dm.carried.get(f.id);
+            return c?.level ? `${CLASS_LABEL[c.level]}${c.inferred ? ' (inferred)' : ''}` : '—';
+          })(),
           dash(f.protocol),
           dash([f.authN, f.authZContext].filter(Boolean).join(' / ')),
           dash(f.encrypted),
@@ -304,7 +341,7 @@ export function buildReport(a: Assessment, opts: ReportOptions = defaultReportOp
         rows.push([
           q.id,
           qById.get(q.id)!.text,
-          ans ? { text: STATUS_LABEL[ans.status], fill: STATUS_FILL[ans.status], bold: true } : { text: 'Unanswered', color: '#868e96' },
+          ans ? { text: `${STATUS_LABEL[ans.status]}${classify(q, ans) === 'weak' ? ' (weak)' : ''}`, fill: FINDING_FILL[classify(q, ans)], bold: true } : { text: 'Unanswered', color: '#868e96' },
           dash([ans?.note, ans?.evidence ? `Evidence: ${ans.evidence}` : ''].filter(Boolean).join(' · ')),
           dash([ans?.owner, ans?.dueDate].filter(Boolean).join(' · ')),
         ]);
@@ -361,6 +398,14 @@ export function buildReport(a: Assessment, opts: ReportOptions = defaultReportOp
           ['Attack path', dash(t.attackPath)],
           ['Impact', dash(t.impact)],
           ['Framework mappings', dash(frameworkLine(t))],
+          [
+            'MITRE ATLAS mitigations',
+            dash(
+              atlasMitigationsFor(t.frameworks.filter((f) => f.fw === 'atlas').map((f) => f.id))
+                .map(({ mitigation: m }) => `${m.id} ${m.name}`)
+                .join('; '),
+            ),
+          ],
           ['Existing controls / evidence', dash([t.existingControls, t.evidence && `Evidence: ${t.evidence}`].filter(Boolean).join(' · '))],
           ['Inherent risk', ratingCell(a, t.inherentLikelihood, t.inherentImpact)],
           ['Rating basis', dash([`Likelihood ${levelText(m.likelihoodLabels, t.inherentLikelihood)}, impact ${levelText(m.impactLabels, t.inherentImpact)}.`, t.ratingRationale, ...t.signals].filter(Boolean).join(' '))],
@@ -374,6 +419,29 @@ export function buildReport(a: Assessment, opts: ReportOptions = defaultReportOp
       });
     }
     if (!confirmed.length) b.push({ t: 'p', text: 'No threats have been confirmed yet.', style: 'callout' });
+    const paths = findAttackPaths(a);
+    if (paths.length) {
+      b.push({ t: 'h2', text: 'Attack paths' });
+      b.push({
+        t: 'p',
+        text: 'Multi-step chains found in the architecture: attacker-reachable input, through a component where AI interprets content, to a high-impact sink, across at least one trust boundary.',
+        style: 'muted',
+      });
+      b.push({
+        t: 'table',
+        head: ['Severity', 'Impact', 'Path', 'Boundaries crossed', 'Controls on path', 'Scenario'],
+        rows: paths.map((p) => [
+          { text: m.ratingLabels[p.severity - 1], fill: RATING_FILL[p.severity - 1], color: RATING_TEXT[p.severity - 1], bold: true },
+          SINK_LABEL[p.category],
+          p.steps.map((id) => byId.get(id)?.name ?? '?').join(' → '),
+          p.boundaries.map((id) => a.boundaries.find((x) => x.id === id)?.name).join(', '),
+          [p.gated && 'Approval gate', p.guarded && 'Guardrail'].filter(Boolean).join(', ') || 'None',
+          a.threats.find((t) => t.signature === `PATH:${p.key}` && t.status !== 'dismissed')?.ref ?? { text: 'Not assessed', color: '#a65f00' },
+        ]),
+        widths: [1, 1.4, 5, 2.2, 1.4, 1.1],
+        small: true,
+      });
+    }
     if (opts.includeDismissed && dismissed.length) {
       b.push({ t: 'h2', text: 'Dismissed scenarios' });
       b.push({ t: 'table', head: ['ID', 'Threat', 'Reason for dismissal'], rows: dismissed.map((t) => [t.ref, t.title, dash(t.dismissReason)]), widths: [1, 4, 5] });
@@ -486,6 +554,30 @@ export function buildReport(a: Assessment, opts: ReportOptions = defaultReportOp
   // ── Gaps ─────────────────────────────────────────────────────────────
   if (on('gaps')) {
     b.push({ t: 'h1', text: section('gaps') });
+    const exposures = dataExposures(a, dm);
+    b.push({ t: 'h3', text: `Data exposure (${exposures.length})` });
+    b.push(
+      exposures.length
+        ? {
+            t: 'table',
+            head: ['Finding', 'Level', 'Detail'],
+            rows: exposures.map((x) => [EXPOSURE_LABEL[x.kind], CLASS_LABEL[x.level], x.detail]),
+            widths: [3, 1.2, 5],
+            small: true,
+          }
+        : { t: 'p', text: 'No sensitive-data exposures detected from flow classification.' },
+    );
+    const weak = weakAnswers(a);
+    if (weak.length) {
+      b.push({ t: 'h3', text: `Weak answers (${weak.length})` });
+      b.push({
+        t: 'table',
+        head: ['Component', 'Finding', 'Note'],
+        rows: weak.map((w) => [w.component.name, `${w.question.id} ${w.question.text} (${STATUS_LABEL[w.answer.status]})`, dash(w.answer.note)]),
+        widths: [2, 5, 3],
+        small: true,
+      });
+    }
     const unknown = gaps.filter((g) => g.kind === 'unknown');
     b.push({ t: 'h3', text: `Unknowns (${unknown.length})` });
     b.push(

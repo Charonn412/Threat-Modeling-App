@@ -4,6 +4,8 @@ import { TIER_LABEL } from '../model/types';
 import { useStore } from '../state/store';
 import { Progress } from './controls';
 import { useTier } from './hooks';
+import { overallPosture, weakAnswers } from '../logic/posture';
+import { CLASS_LABEL, dataExposures, EXPOSURE_LABEL } from '../logic/dataflow';
 
 const SECTIONS: { kind: Gap['kind']; title: string; help: string }[] = [
   { kind: 'unknown', title: 'Unknowns (tracked gaps)', help: '"Unknown" is a tracked gap, not an implicit pass. Each one needs an owner and a resolution date (Part II).' },
@@ -35,6 +37,8 @@ export function GapsPage() {
         {TIER_LABEL[tier]} tier · {c.percent}% complete. Select an item to jump to it in the architecture.
       </p>
       <Progress value={c.percent} />
+      <WeakAnswers />
+      <DataExposures />
       {SECTIONS.map((sec) => {
         const items = gaps.filter((g) => g.kind === sec.kind);
         const collapsible = sec.kind === 'unanswered';
@@ -87,5 +91,110 @@ export function GapsPage() {
         );
       })}
     </div>
+  );
+}
+
+function WeakAnswers() {
+  const a = useStore((s) => s.assessment)!;
+  const select = useStore((s) => s.select);
+  const setStep = useStore((s) => s.setStep);
+  const weak = weakAnswers(a);
+  const p = overallPosture(a);
+  return (
+    <section className="card">
+      <h2>
+        Weak answers (security findings) <span className="count">{weak.length}</span>
+      </h2>
+      <p className="small muted">
+        Answers that indicate a weakness: the secure answer is the opposite. They raise the suggested likelihood of related threats.
+        {p.score !== null && ` Overall posture: ${p.score}% secure (${p.secure} secure, ${p.weak} weak, ${p.gap} unknown).`}
+      </p>
+      {weak.length === 0 ? (
+        <p className="small ok">None recorded.</p>
+      ) : (
+        <table className="table">
+          <thead>
+            <tr>
+              <th>Component</th>
+              <th>Finding</th>
+              <th>Note</th>
+            </tr>
+          </thead>
+          <tbody>
+            {weak.map((w) => (
+              <tr key={`${w.component.id}-${w.question.id}`}>
+                <td>
+                  <button
+                    type="button"
+                    className="link"
+                    onClick={() => {
+                      select({ kind: 'component', id: w.component.id });
+                      setStep('architecture');
+                    }}
+                  >
+                    {w.component.name}
+                  </button>
+                </td>
+                <td>
+                  <span className="q-id">{w.question.id}</span> {w.question.text} <strong className="danger-text">{w.answer.status === 'yes' ? 'Yes' : 'No'}</strong>
+                </td>
+                <td className="small">{w.answer.note || '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </section>
+  );
+}
+
+function DataExposures() {
+  const a = useStore((s) => s.assessment)!;
+  const select = useStore((s) => s.select);
+  const setStep = useStore((s) => s.setStep);
+  const items = dataExposures(a);
+  return (
+    <section className="card">
+      <h2>
+        Data exposure <span className="count">{items.length}</span>
+      </h2>
+      <p className="small muted">
+        Sensitivity is tracked along flows: explicit labels win, unlabeled flows inherit their source's data, and data sources start from the intake classification. Set
+        each component's approved classification to detect over-exposure.
+      </p>
+      {items.length === 0 ? (
+        <p className="small ok">No sensitive-data exposures detected.</p>
+      ) : (
+        <table className="table">
+          <thead>
+            <tr>
+              <th>Finding</th>
+              <th>Level</th>
+              <th>Detail</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((x, i) => (
+              <tr key={i}>
+                <td>
+                  <button
+                    type="button"
+                    className="link"
+                    onClick={() => {
+                      select(x.flowId ? { kind: 'flow', id: x.flowId } : { kind: 'component', id: x.componentId });
+                      setStep('architecture');
+                    }}
+                  >
+                    {EXPOSURE_LABEL[x.kind]}
+                  </button>
+                </td>
+                <td>{CLASS_LABEL[x.level]}</td>
+                <td className="small">{x.detail}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </section>
   );
 }

@@ -4,6 +4,8 @@ import { getComponentType } from '../library/catalog';
 import { parse, pickFile } from '../io/file';
 import { useStore } from '../state/store';
 import { DescribePanel } from './DescribePanel';
+import { AssessmentList } from './AssessmentList';
+import { prepareImport } from '../state/workspace';
 
 export function StartPage() {
   const current = useStore((s) => s.assessment);
@@ -13,14 +15,15 @@ export function StartPage() {
   const [describing, setDescribing] = useState(false);
   const [error, setError] = useState('');
 
-  const confirmReplace = () => !current || window.confirm('Start a new assessment? The current one stays only in this browser until replaced. Save it to a file first if you need it.');
+  // Every assessment is kept in the local workspace, so starting another never loses work.
+  const confirmReplace = () => true;
 
   const open = async () => {
     setError('');
     const text = await pickFile();
     if (!text) return;
     try {
-      if (confirmReplace()) load(parse(text));
+      load(prepareImport(parse(text)));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not open file.');
     }
@@ -81,6 +84,8 @@ export function StartPage() {
         </button>
       </div>
       {error && <p className="warn">{error}</p>}
+
+      <AssessmentList />
 
       <h2>Starter templates</h2>
       <p className="small muted">

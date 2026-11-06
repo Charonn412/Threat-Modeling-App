@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useStore, type Step } from './state/store';
 import { downloadText, fileNameFor, parse, pickFile, serialize } from './io/file';
+import { prepareImport } from './state/workspace';
 import { StartPage } from './ui/StartPage';
 import { IntakePage } from './ui/IntakePage';
 import { ArchitecturePage } from './ui/ArchitecturePage';
@@ -62,7 +63,7 @@ export default function App() {
     const text = await pickFile();
     if (!text) return;
     try {
-      if (window.confirm('Replace the current assessment with this file?')) load(parse(text));
+      load(prepareImport(parse(text)));
     } catch (e) {
       flash(e instanceof Error ? e.message : 'Could not open file.');
     }

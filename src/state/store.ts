@@ -19,8 +19,11 @@ import {
 import { NODE_W } from '../logic/analysis';
 import type { DiagramSuggestion } from '../library/questions';
 import { migrate } from '../io/file';
+import { saveAssessment, listAssessments, StorageFullError } from './workspace';
 import { emptyThreat, nextThreatRef, refreshThreats, type RefreshResult } from '../logic/threats';
 import { emptyControl, generateControls } from '../logic/controls';
+import { threatFromPath, type AttackPath } from '../logic/paths';
+import { autoLayout } from '../logic/layout';
 import { catalogVersions } from '../library/frameworks';
 
 export type Step = 'start' | 'intake' | 'architecture' | 'gaps' | 'objectives' | 'threats' | 'risk' | 'report' | 'settings' | 'libraries' | 'validation';
@@ -69,6 +72,10 @@ interface State {
   refreshThreats(): RefreshResult | null;
   updateThreat(id: string, patch: Partial<Threat>): void;
   addCustomThreat(): string;
+  addThreatFromPath(p: AttackPath): string;
+  applyAutoLayout(): void;
+  undoLayout(): void;
+  layoutUndo: { components: Record<string, { x: number; y: number }>; boundaries: Record<string, { position: { x: number; y: number }; width: number; height: number }> } | null;
   removeThreat(id: string): void;
   selectedThreat: string | null;
   selectThreat(id: string | null): void;
@@ -107,7 +114,7 @@ export const useStore = create<State>()(
         showAllTiers: false,
 
         setStep: (step) => set({ step }),
-        load: (a) => set({ assessment: a, selection: null, selectedThreat: null, step: 'intake' }),
+        load: (a) => set({ assessment: a, selection: null, selectedThreat: null, layoutUndo: null, step: 'intake' }),
         startBlank: () => set({ assessment: newAssessment(), selection: null, step: 'intake' }),
         close: () => set({ assessment: null, selection: null, step: 'start' }),
         replaceAssessment: (a) => set({ assessment: touch(a) }),
@@ -214,6 +221,48 @@ export const useStore = create<State>()(
               };
             }),
           })),
+        layoutUndo: null,
+        applyAutoLayout: () => {
+          const a = get().assessment;
+          if (!a) return;
+          const r = autoLayout(a);
+          set({
+            layoutUndo: {
+              components: Object.fromEntries(a.components.map((c) => [c.id, c.position])),
+              boundaries: Object.fromEntries(a.boundaries.map((b) => [b.id, { position: b.position, width: b.width, height: b.height }])),
+            },
+          });
+          mutate((x) => ({
+            ...x,
+            components: x.components.map((c) => (r.components[c.id] ? { ...c, position: r.components[c.id] } : c)),
+            boundaries: x.boundaries.map((b) => {
+              const n = r.boundaries[b.id];
+              return n ? { ...b, position: { x: n.x, y: n.y }, width: n.width, height: n.height } : b;
+            }),
+          }));
+        },
+        undoLayout: () => {
+          const u = get().layoutUndo;
+          if (!u) return;
+          mutate((x) => ({
+            ...x,
+            components: x.components.map((c) => (u.components[c.id] ? { ...c, position: u.components[c.id] } : c)),
+            boundaries: x.boundaries.map((b) => (u.boundaries[b.id] ? { ...b, ...u.boundaries[b.id] } : b)),
+          }));
+          set({ layoutUndo: null });
+        },
+        addThreatFromPath: (p) => {
+          const a = get().assessment!;
+          const existing = a.threats.find((t) => t.signature === `PATH:${p.key}`);
+          if (existing) {
+            set({ selectedThreat: existing.id });
+            return existing.id;
+          }
+          const t = threatFromPath(a, p, nextThreatRef(a));
+          mutate((x) => ({ ...x, threats: [...x.threats, t] }));
+          set({ selectedThreat: t.id });
+          return t.id;
+        },
         addCustomThreat: () => {
           const a = get().assessment!;
           const t = { ...emptyThreat(nextThreatRef(a)), title: 'New threat scenario', edited: true };
@@ -290,3 +339,40 @@ export const useStore = create<State>()(
     },
   ),
 );
+
+// ── Workspace autosave ────────────────────────────────────────────────────
+// Every assessment is also kept in the local workspace (see workspace.ts) so
+// several can coexist and none is lost when another is opened.
+
+let saveTimer: ReturnType<typeof setTimeout> | null = null;
+export const workspaceErrors = { last: '' };
+
+function persistToWorkspace(a: Assessment) {
+  try {
+    saveAssessment(a);
+    workspaceErrors.last = '';
+  } catch (e) {
+    workspaceErrors.last = e instanceof StorageFullError ? e.message : String(e);
+  }
+}
+
+const initial = useStore.getState().assessment;
+if (initial && !listAssessments().some((e) => e.id === initial.id)) persistToWorkspace(initial);
+
+useStore.subscribe((s, prev) => {
+  if (!s.assessment) {
+    // Closed (e.g. deleted): drop any pending save so it is not resurrected.
+    if (saveTimer) clearTimeout(saveTimer);
+    saveTimer = null;
+    return;
+  }
+  if (s.assessment === prev.assessment) return;
+  const a = s.assessment;
+  if (saveTimer) clearTimeout(saveTimer);
+  // Save immediately when switching assessments (flushing the previous one), debounce while editing.
+  if (prev.assessment?.id !== a.id) {
+    if (prev.assessment) persistToWorkspace(prev.assessment);
+    persistToWorkspace(a);
+  }
+  else saveTimer = setTimeout(() => persistToWorkspace(a), 400);
+});

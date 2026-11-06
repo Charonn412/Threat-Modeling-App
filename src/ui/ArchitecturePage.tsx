@@ -92,6 +92,7 @@ function Toolbar() {
   const layers = useStore((s) => s.layers);
   const toggle = useStore((s) => s.toggleLayer);
   const addBoundary = useStore((s) => s.addBoundary);
+  const canUndo = useStore((s) => !!s.layoutUndo);
   const { screenToFlowPosition, fitView } = useReactFlow();
   const LAYERS: [keyof Layers, string][] = [
     ['data', 'Data plane'],
@@ -115,6 +116,29 @@ function Toolbar() {
       <button type="button" className="btn small" onClick={() => fitView({ padding: 0.15, duration: 300 })}>
         Fit view
       </button>
+      <button
+        type="button"
+        className="btn small"
+        title="Arrange components left to right along the flows, keeping trust boundaries"
+        onClick={() => {
+          useStore.getState().applyAutoLayout();
+          setTimeout(() => fitView({ padding: 0.15, duration: 300 }), 50);
+        }}
+      >
+        ⇄ Auto-layout
+      </button>
+      {canUndo && (
+        <button
+          type="button"
+          className="btn small"
+          onClick={() => {
+            useStore.getState().undoLayout();
+            setTimeout(() => fitView({ padding: 0.15, duration: 300 }), 50);
+          }}
+        >
+          Undo layout
+        </button>
+      )}
       <span className="toolbar-sep" />
       <span className="small muted">Layers:</span>
       {LAYERS.map(([k, label]) => (

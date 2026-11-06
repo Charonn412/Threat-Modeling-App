@@ -37,7 +37,36 @@ def atlas(path):
         "modified": str(d["collection"].get("modified-date", "")),
         "tactics": [{"id": k, "name": v} for k, v in sorted(tactics.items())],
         "items": items,
+        "mitigations": atlas_mitigations(d),
     }
+
+
+def first_sentence(text, limit=300):
+    text = " ".join(str(text or "").split())
+    cut = text.find(". ")
+    s = text[: cut + 1] if 0 < cut < limit else text[:limit]
+    return s if len(s) < limit else s[: limit - 1] + "…"
+
+
+def atlas_mitigations(d):
+    out = []
+    for mid, m in sorted(d.get("mitigations", {}).items()):
+        if m.get("deprecated") or m.get("object-type", "mitigation") != "mitigation":
+            continue
+        rels = d["relationships"].get(mid, {}) if isinstance(d["relationships"].get(mid), dict) else {}
+        techniques = [
+            {"id": r["target"], "how": first_sentence(r.get("description", ""))}
+            for r in rels.get("mitigates", [])
+            if r["target"] in d["techniques"]
+        ]
+        out.append({
+            "id": mid,
+            "name": m["name"],
+            "summary": first_sentence(m.get("description", "")),
+            "categories": m.get("categories", []),
+            "techniques": techniques,
+        })
+    return out
 
 
 def attack(path):

@@ -148,7 +148,7 @@ function condTypes(c: Cond): string[] {
   }
 }
 
-const COND_KINDS = new Set(['type', 'flow', 'has', 'lacks', 'connected', 'intake', 'answer', 'any', 'all', 'not']);
+const COND_KINDS = new Set(['type', 'flow', 'has', 'lacks', 'connected', 'intake', 'answer', 'data', 'dataAboveApproval', 'any', 'all', 'not']);
 
 export function validateConds(conds: unknown): string | null {
   if (!Array.isArray(conds)) return 'Conditions must be a JSON array.';
@@ -161,6 +161,7 @@ export function validateConds(conds: unknown): string | null {
     if (k === 'connected' && !['in', 'out', 'any'].includes(String(o.direction))) return `${path}: "connected" needs direction in|out|any`;
     if (k === 'intake' && (typeof o.field !== 'string' || !Array.isArray(o.in))) return `${path}: "intake" needs "field" and "in"`;
     if (k === 'answer' && (typeof o.q !== 'string' || !Array.isArray(o.in))) return `${path}: "answer" needs "q" and "in"`;
+    if (k === 'data' && !['public', 'internal', 'confidential', 'restricted'].includes(String(o.min))) return `${path}: "data" needs "min": public|internal|confidential|restricted`;
     if (k === 'any' || k === 'all') {
       if (!Array.isArray(o.conds)) return `${path}: "${k}" needs a "conds" array`;
       for (let i = 0; i < o.conds.length; i++) {

@@ -98,7 +98,7 @@ describe('version comparison', () => {
     const after = structuredClone(before);
     after.components.push(newComponent('code_sandbox', { x: 0, y: 0 }));
     const blocks = buildReport(after, {
-      sections: Object.fromEntries(['summary', 'changes', 'charter', 'architecture', 'answers', 'objectives', 'threats', 'register', 'controls', 'coverage', 'gaps', 'dod', 'signoff'].map((s) => [s, true])) as never,
+      sections: Object.fromEntries(['summary', 'changes', 'charter', 'architecture', 'answers', 'objectives', 'threats', 'register', 'controls', 'coverage', 'compliance', 'gaps', 'dod', 'signoff'].map((s) => [s, true])) as never,
       includeDismissed: true,
       includeUnanswered: false,
       baseline: { label: 'v1.0', createdAt: '2026-11-01T00:00:00Z', data: before },

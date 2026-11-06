@@ -546,6 +546,10 @@ export function PatternForm({ item, isNew, onSaved, onCancelNew }: FormProps<Pat
           }}
         />
       </Field>
+      <div className="field">
+        <span className="field-label">Compliance mappings (controls generated from this pattern inherit them)</span>
+        <FrameworkTags value={draft.compliance ?? []} onChange={(v) => set({ compliance: v })} />
+      </div>
       <Field label='Suggested validation tests (one per line; start with "Negative:" for tests that prove unauthorized behavior is denied)'>
         <textarea
           className="input"

@@ -31,6 +31,15 @@ See [`docs/PRODUCT_SPEC.md`](docs/PRODUCT_SPEC.md) for the full design.
   - **De-duplication:** near-duplicate threats are merged.
   - **Auto-layout** of the diagram, with undo.
   - **MITRE ATLAS mitigations** are shown on threats and in the report.
+- **Compliance mapping (Validation → Compliance coverage, and the report)**
+  - Frameworks: NIST AI RMF 1.0, NIST AI 600-1, ISO/IEC 42001 Annex A, the EU AI Act, NIST CSF 2.0 and NIST SP 800-53 Rev 5.
+  - Secure patterns map to requirements. Controls inherit those mappings, and threats inherit them through their domain and patterns.
+  - Each requirement shows **Verified** (a linked control passed its tests), **In progress** or **Gap**.
+  - Mappings are editable in Libraries → Secure patterns.
+  - Sources:
+    - The NIST catalogs are generated from official NIST data by `scripts/extract_compliance.py`.
+    - AI 600-1 categories are transcribed from the NIST PDF.
+    - EU AI Act and ISO 42001 titles are transcribed from secondary sources and are editable in Libraries.
 - **Assessments and versions**
   - Every assessment is saved separately in the browser and listed on Home.
   - Named version snapshots can be compared, restored, or used as the report baseline. The comparison shows the Section 13 reassessment triggers that the changes hit.

@@ -98,7 +98,7 @@ export function SettingsPage() {
                     {c.name}
                   </a>
                 </td>
-                <td>{c.kind === 'ai' ? 'AI' : 'Traditional'}</td>
+                <td>{c.kind === 'ai' ? 'AI' : c.kind === 'compliance' ? 'Compliance' : 'Traditional'}</td>
                 <td>{c.version}</td>
                 <td>{c.items.length}</td>
                 <td className={a.frameworkVersions[c.name] && a.frameworkVersions[c.name] !== c.version ? 'warn' : ''}>{a.frameworkVersions[c.name] ?? '—'}</td>

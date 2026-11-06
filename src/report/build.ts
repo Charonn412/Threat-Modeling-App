@@ -9,6 +9,7 @@ import { autonomyReach, rating } from '../logic/risk';
 import { narrative } from '../logic/threats';
 import { findAttackPaths, SINK_LABEL } from '../logic/paths';
 import { diffAssessments } from '../logic/diff';
+import { COMPLIANCE_IDS, complianceCoverage, COVERAGE_LABEL } from '../logic/compliance';
 import { classify, overallPosture, weakAnswers } from '../logic/posture';
 import { CLASS_LABEL, dataExposures, EXPOSURE_LABEL, propagate } from '../logic/dataflow';
 import { definitionOfDone, threatEvidence, verification, VERIFICATION_LABEL } from '../logic/controls';
@@ -30,7 +31,7 @@ import { BOUNDARY_KIND_LABEL, CONTENT_ORIGIN_OPTIONS, TRUST_OPTIONS } from '../u
 import { RATING_FILL, RATING_TEXT, type Block, type Cell } from './blocks';
 import { flowNumbers, renderArchitectureSvg } from './diagram';
 
-export type SectionId = 'summary' | 'changes' | 'charter' | 'architecture' | 'answers' | 'objectives' | 'threats' | 'register' | 'controls' | 'coverage' | 'gaps' | 'dod' | 'signoff';
+export type SectionId = 'summary' | 'changes' | 'charter' | 'architecture' | 'answers' | 'objectives' | 'threats' | 'register' | 'controls' | 'coverage' | 'compliance' | 'gaps' | 'dod' | 'signoff';
 
 export const SECTIONS: { id: SectionId; title: string }[] = [
   { id: 'summary', title: 'Executive summary' },
@@ -43,6 +44,7 @@ export const SECTIONS: { id: SectionId; title: string }[] = [
   { id: 'register', title: 'Risk register and treatment' },
   { id: 'controls', title: 'Control and evidence tracker' },
   { id: 'coverage', title: 'Framework coverage' },
+  { id: 'compliance', title: 'Compliance mapping' },
   { id: 'gaps', title: 'Open items, assumptions and gaps' },
   { id: 'dod', title: 'Definition of done' },
   { id: 'signoff', title: 'Approval and sign-off' },
@@ -535,7 +537,7 @@ export function buildReport(a: Assessment, opts: ReportOptions = defaultReportOp
   if (on('coverage')) {
     b.push({ t: 'h1', text: section('coverage') });
     b.push({ t: 'p', text: 'Traceability from framework items to confirmed threat scenarios. Only items referenced by at least one confirmed scenario are listed.', style: 'muted' });
-    for (const c of CATALOGS) {
+    for (const c of CATALOGS.filter((x) => x.kind !== 'compliance')) {
       const used = c.items.filter((item) => confirmed.some((t) => t.frameworks.some((f) => f.fw === c.id && f.id === item.id)));
       if (!used.length) continue;
       b.push({ t: 'h3', text: `${c.name} (${c.version})` });
@@ -549,6 +551,46 @@ export function buildReport(a: Assessment, opts: ReportOptions = defaultReportOp
     }
     const unknownTags = confirmed.flatMap((t) => t.frameworks.filter((f) => !lookup(f.fw, f.id)).map((f) => `${t.ref}: ${getCatalog(f.fw)?.short ?? f.fw} ${f.id}`));
     if (unknownTags.length) b.push({ t: 'p', text: `Mappings not found in current catalogs: ${unknownTags.join('; ')}`, style: 'callout' });
+  }
+
+  // ── Compliance ───────────────────────────────────────────────────────
+  if (on('compliance')) {
+    b.push({ t: 'h1', text: section('compliance') });
+    b.push({
+      t: 'p',
+      text: 'Requirements traced through secure patterns to controls and threats. "Verified" means at least one linked control passed its validation tests, including a negative test. Mappings are assessor guidance, not a certification.',
+      style: 'muted',
+    });
+    const covs = COMPLIANCE_IDS.map((id) => ({ cat: CATALOGS.find((c) => c.id === id)!, cov: complianceCoverage(a, id) }));
+    b.push({
+      t: 'table',
+      head: ['Framework', 'Verified', 'In progress', 'Gaps', 'Not addressed'],
+      rows: covs.map(({ cat, cov }) => [
+        `${cat.name} ${cat.version}`,
+        { text: String(cov.verified), fill: cov.verified ? '#d3f9d8' : undefined, bold: true },
+        { text: String(cov.inProgress), fill: cov.inProgress ? '#fff3bf' : undefined, bold: true },
+        { text: String(cov.gaps), fill: cov.gaps ? '#ffe3e3' : undefined, bold: true },
+        String(cov.notAddressed),
+      ]),
+      widths: [4, 1, 1, 1, 1.2],
+    });
+    const FILL = { verified: '#d3f9d8', 'in-progress': '#fff3bf', gap: '#ffe3e3' } as const;
+    for (const { cat, cov } of covs) {
+      if (!cov.rows.length) continue;
+      b.push({ t: 'h3', text: `${cat.name} (${cat.version})` });
+      b.push({
+        t: 'table',
+        head: ['Requirement', 'Status', 'Controls', 'Threats'],
+        rows: cov.rows.map((r) => [
+          `${r.item.id} ${r.item.name}`,
+          { text: COVERAGE_LABEL[r.status], fill: FILL[r.status], bold: true },
+          dash(r.controls.map((c) => `${c.ref} (${VERIFICATION_LABEL[verification(c)]})`).join(', ')),
+          dash(r.threats.map((t) => t.ref).join(', ')),
+        ]),
+        widths: [4.5, 1.6, 2.6, 2],
+        small: true,
+      });
+    }
   }
 
   // ── Gaps ─────────────────────────────────────────────────────────────

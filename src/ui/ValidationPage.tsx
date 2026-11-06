@@ -6,6 +6,7 @@ import { CONTROL_STATUS_LABEL, type Control, type ControlStatus, type EvidenceTy
 import { useStore } from '../state/store';
 import { Field, TextArea, TextInput } from './controls';
 import { RatingBadge } from './risk';
+import { ComplianceView } from './ComplianceView';
 
 const EVIDENCE: { value: EvidenceType; label: string; hint: string }[] = [
   { value: 'architecture', label: 'Architecture / configuration', hint: 'Diagrams, IAM policy exports, gateway config, network rules, tool allowlists, retention settings' },
@@ -19,6 +20,11 @@ export function VerificationBadge({ v }: { v: Verification }) {
 }
 
 export function ValidationPage() {
+  const [view, setView] = useState<'controls' | 'compliance'>('controls');
+  return view === 'compliance' ? <ComplianceView onBack={() => setView('controls')} /> : <ControlsView onCompliance={() => setView('compliance')} />;
+}
+
+function ControlsView({ onCompliance }: { onCompliance: () => void }) {
   const a = useStore((s) => s.assessment)!;
   const generate = useStore((s) => s.generateControls);
   const addControl = useStore((s) => s.addControl);
@@ -64,9 +70,14 @@ export function ValidationPage() {
               </option>
             ))}
           </select>
-          <button type="button" className="link small" onClick={addControl}>
-            + Custom control
-          </button>
+          <div className="row between">
+            <button type="button" className="link small" onClick={addControl}>
+              + Custom control
+            </button>
+            <button type="button" className="link small" onClick={onCompliance}>
+              Compliance coverage →
+            </button>
+          </div>
         </div>
         <ul className="tl-items">
           {list.map((c) => (

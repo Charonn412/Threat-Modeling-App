@@ -4,7 +4,8 @@ import { PATTERNS, getPattern } from '../library/patterns';
 import { narrative, type RefreshResult } from '../logic/threats';
 import { threatEvidence, verification } from '../logic/controls';
 import { findAttackPaths, SINK_LABEL, type AttackPath } from '../logic/paths';
-import { atlasMitigationsFor } from '../library/frameworks';
+import { atlasMitigationsFor, getCatalog, lookup } from '../library/frameworks';
+import { threatCompliance } from '../logic/compliance';
 import { VerificationBadge } from './ValidationPage';
 import { rating } from '../logic/risk';
 import { OBJECTIVE_LABEL, type ObjectiveId, type Threat, type ThreatStatus, type Treatment } from '../model/types';
@@ -380,6 +381,7 @@ function ThreatEditor({ t }: { t: Threat }) {
       <h3 className="mt">Framework mappings</h3>
       <FrameworkTags value={t.frameworks} onChange={(v) => set({ frameworks: v })} />
       <AtlasMitigations t={t} />
+      <ThreatCompliance t={t} />
 
       <h3 className="mt">Existing controls & inherent risk (Stage 5)</h3>
       <div className="grid2">
@@ -592,6 +594,32 @@ function AtlasMitigations({ t }: { t: Threat }) {
               <div key={h} className="muted">
                 {h}
               </div>
+            ))}
+          </li>
+        ))}
+      </ul>
+    </details>
+  );
+}
+
+function ThreatCompliance({ t }: { t: Threat }) {
+  const refs = threatCompliance(t);
+  if (!refs.length) return null;
+  const byFw = new Map<string, string[]>();
+  for (const r of refs) byFw.set(r.fw, [...(byFw.get(r.fw) ?? []), r.id]);
+  return (
+    <details className="sub-card small">
+      <summary>
+        <strong>Compliance</strong>: derived from the threat domain and selected secure patterns ({refs.length})
+      </summary>
+      <ul className="plain">
+        {[...byFw].map(([fw, ids]) => (
+          <li key={fw}>
+            <strong>{getCatalog(fw)?.short ?? fw}:</strong>{' '}
+            {ids.map((id) => (
+              <span key={id} className="chip static fw" title={lookup(fw, id)?.name}>
+                {id}
+              </span>
             ))}
           </li>
         ))}

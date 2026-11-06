@@ -8,6 +8,7 @@ import { computeGaps, completeness, crossedBoundaries, membership, missingFlowLa
 import { autonomyReach, rating } from '../logic/risk';
 import { narrative } from '../logic/threats';
 import { findAttackPaths, SINK_LABEL } from '../logic/paths';
+import { diffAssessments } from '../logic/diff';
 import { classify, overallPosture, weakAnswers } from '../logic/posture';
 import { CLASS_LABEL, dataExposures, EXPOSURE_LABEL, propagate } from '../logic/dataflow';
 import { definitionOfDone, threatEvidence, verification, VERIFICATION_LABEL } from '../logic/controls';
@@ -29,10 +30,11 @@ import { BOUNDARY_KIND_LABEL, CONTENT_ORIGIN_OPTIONS, TRUST_OPTIONS } from '../u
 import { RATING_FILL, RATING_TEXT, type Block, type Cell } from './blocks';
 import { flowNumbers, renderArchitectureSvg } from './diagram';
 
-export type SectionId = 'summary' | 'charter' | 'architecture' | 'answers' | 'objectives' | 'threats' | 'register' | 'controls' | 'coverage' | 'gaps' | 'dod' | 'signoff';
+export type SectionId = 'summary' | 'changes' | 'charter' | 'architecture' | 'answers' | 'objectives' | 'threats' | 'register' | 'controls' | 'coverage' | 'gaps' | 'dod' | 'signoff';
 
 export const SECTIONS: { id: SectionId; title: string }[] = [
   { id: 'summary', title: 'Executive summary' },
+  { id: 'changes', title: 'Changes since baseline version' },
   { id: 'charter', title: 'Assessment charter and scope' },
   { id: 'architecture', title: 'Architecture and data flows' },
   { id: 'answers', title: 'Architecture discovery record' },
@@ -51,6 +53,8 @@ export interface ReportOptions {
   includeDismissed: boolean;
   includeUnanswered: boolean;
   generatedAt?: Date;
+  /** Earlier version to compare against (Stage 9 reassessment). */
+  baseline?: { label: string; createdAt: string; data: Assessment };
 }
 
 export const defaultReportOptions = (): ReportOptions => ({
@@ -215,6 +219,28 @@ export function buildReport(a: Assessment, opts: ReportOptions = defaultReportOp
       b.push({ t: 'h3', text: 'Key open items' });
       b.push({ t: 'list', items: keyItems });
     }
+  }
+
+  // ── Changes since baseline (Stage 9) ────────────────────────────────
+  if (on('changes') && opts.baseline) {
+    const d = diffAssessments(opts.baseline.data, a);
+    n += 1;
+    b.push({ t: 'h1', text: `${n}. Changes since ${opts.baseline.label}` });
+    b.push({ t: 'p', text: `Compared with version "${opts.baseline.label}" saved ${opts.baseline.createdAt.slice(0, 10)}.`, style: 'muted' });
+    if (d.triggers.length) {
+      b.push({ t: 'h3', text: 'Reassessment triggers hit (Section 13)' });
+      b.push({ t: 'table', head: ['Trigger', 'Because'], rows: d.triggers.map((t) => [t.label, t.because.join('; ')]), widths: [4, 5], small: true });
+    } else b.push({ t: 'p', text: 'No Section 13 reassessment triggers were hit by these changes.' });
+    if (d.changes.length) {
+      b.push({ t: 'h3', text: `Changes (${d.changes.length})` });
+      b.push({
+        t: 'table',
+        head: ['Area', 'Change', 'Item', 'Detail'],
+        rows: d.changes.map((c) => [capital(c.area), capital(c.kind), c.label, dash(c.detail)]),
+        widths: [1.2, 1, 3.5, 4],
+        small: true,
+      });
+    } else b.push({ t: 'p', text: 'No changes.' });
   }
 
   // ── Charter ──────────────────────────────────────────────────────────

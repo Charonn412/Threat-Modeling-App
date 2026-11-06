@@ -19,6 +19,7 @@ import {
 import { NODE_W } from '../logic/analysis';
 import type { DiagramSuggestion } from '../library/questions';
 import { migrate } from '../io/file';
+import { saveAssessment, listAssessments, StorageFullError } from './workspace';
 import { emptyThreat, nextThreatRef, refreshThreats, type RefreshResult } from '../logic/threats';
 import { emptyControl, generateControls } from '../logic/controls';
 import { threatFromPath, type AttackPath } from '../logic/paths';
@@ -304,3 +305,40 @@ export const useStore = create<State>()(
     },
   ),
 );
+
+// ── Workspace autosave ────────────────────────────────────────────────────
+// Every assessment is also kept in the local workspace (see workspace.ts) so
+// several can coexist and none is lost when another is opened.
+
+let saveTimer: ReturnType<typeof setTimeout> | null = null;
+export const workspaceErrors = { last: '' };
+
+function persistToWorkspace(a: Assessment) {
+  try {
+    saveAssessment(a);
+    workspaceErrors.last = '';
+  } catch (e) {
+    workspaceErrors.last = e instanceof StorageFullError ? e.message : String(e);
+  }
+}
+
+const initial = useStore.getState().assessment;
+if (initial && !listAssessments().some((e) => e.id === initial.id)) persistToWorkspace(initial);
+
+useStore.subscribe((s, prev) => {
+  if (!s.assessment) {
+    // Closed (e.g. deleted): drop any pending save so it is not resurrected.
+    if (saveTimer) clearTimeout(saveTimer);
+    saveTimer = null;
+    return;
+  }
+  if (s.assessment === prev.assessment) return;
+  const a = s.assessment;
+  if (saveTimer) clearTimeout(saveTimer);
+  // Save immediately when switching assessments (flushing the previous one), debounce while editing.
+  if (prev.assessment?.id !== a.id) {
+    if (prev.assessment) persistToWorkspace(prev.assessment);
+    persistToWorkspace(a);
+  }
+  else saveTimer = setTimeout(() => persistToWorkspace(a), 400);
+});

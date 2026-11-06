@@ -4,6 +4,8 @@ import type { Block, Cell } from '../report/blocks';
 import { DECISION_LABEL, REASSESSMENT_TRIGGERS, type Decision, type SignOff } from '../model/types';
 import { definitionOfDone } from '../logic/controls';
 import { useTier } from './hooks';
+import { getVersion, listVersions } from '../state/workspace';
+import { VersionsPanel } from './VersionsPanel';
 import { useStore } from '../state/store';
 import { Field, TextArea, TextInput } from './controls';
 import { downloadBlob, fileBase } from '../io/file';
@@ -12,6 +14,7 @@ export function ReportPage() {
   const a = useStore((s) => s.assessment)!;
   const update = useStore((s) => s.updateSignOff);
   const [opts, setOpts] = useState<ReportOptions>(defaultReportOptions);
+  const [baselineId, setBaselineId] = useState('');
   const [busy, setBusy] = useState<'' | 'pdf' | 'docx'>('');
   const [error, setError] = useState('');
   const blocks = useMemo(() => buildReport(a, opts), [a, opts]);
@@ -77,6 +80,12 @@ export function ReportPage() {
             </li>
           ))}
         </ul>
+
+        <VersionsPanel baselineId={opts.baseline ? baselineId : ''} onBaseline={(id) => {
+          setBaselineId(id);
+          const v = id ? listVersions(a.id).find((x) => x.id === id) : undefined;
+          setOpts({ ...opts, baseline: v ? { label: v.label, createdAt: v.createdAt, data: getVersion(a.id, v.id)! } : undefined });
+        }} />
 
         <h3 className="mt">Sections</h3>
         {SECTIONS.map((sec) => (

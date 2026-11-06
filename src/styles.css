@@ -1654,3 +1654,8 @@ code {
 .path-steps li { margin: 6px 0; }
 .path-steps li.pivot { font-weight: 600; }
 .path-steps li.sink { color: var(--danger); font-weight: 600; }
+.versions li { border-top: 1px solid var(--border); padding: 6px 0; }
+.badge.diff-added { border-color: var(--ok); color: var(--ok); }
+.badge.diff-removed { border-color: var(--danger); color: var(--danger); }
+.badge.diff-changed { border-color: var(--accent); color: var(--accent); }
+.current-row { background: var(--accent-soft); }

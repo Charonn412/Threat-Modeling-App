@@ -145,7 +145,7 @@ export function Canvas() {
       >
         <Background gap={20} />
         <Controls showInteractive={false} />
-        <MiniMap pannable zoomable nodeStrokeWidth={2} />
+        <MiniMap pannable zoomable nodeStrokeWidth={2} style={{ width: 150, height: 100 }} />
       </ReactFlow>
     </div>
   );

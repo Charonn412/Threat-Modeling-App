@@ -1127,13 +1127,17 @@ tr:last-child .hm-axis {
 }
 
 @media (max-width: 980px) {
+  /* Phones: list → detail. Only one pane is shown at a time. */
   .threats {
     grid-template-columns: 1fr;
-    grid-template-rows: 45vh auto;
-    height: auto;
+    height: 100%;
   }
-  .main:has(.threats) {
-    overflow: auto;
+  .threats.has-selection .threat-list,
+  .threats:not(.has-selection) .threat-detail {
+    display: none;
+  }
+  .threat-list {
+    border-right: none;
   }
   .grid3 {
     grid-template-columns: 1fr;
@@ -1589,3 +1593,51 @@ code {
 .seg-btn.on.res-fail { background: var(--danger); color: #fff; }
 .seg-btn.on.res-blocked { background: var(--warn); color: #fff; }
 .dod li { margin: 6px 0; }
+
+/* Back-to-list button, only on narrow screens */
+.mobile-back {
+  display: none;
+}
+/* Mini-map: compact on desktop, hidden on phones where it would cover the diagram */
+.react-flow__minimap {
+  width: 150px;
+  height: 100px;
+}
+.react-flow__minimap svg {
+  width: 150px;
+  height: 100px;
+}
+@media (max-width: 980px) {
+  .mobile-back {
+    display: inline-flex;
+    margin-bottom: 8px;
+  }
+  .react-flow__minimap {
+    display: none;
+  }
+  /* Keep the header to one scrollable row of stages so content gets the screen. */
+  .topbar {
+    gap: 6px 10px;
+    padding: 6px 10px;
+  }
+  .steps {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    width: 100%;
+    order: 3;
+    scrollbar-width: none;
+  }
+  .steps::-webkit-scrollbar {
+    display: none;
+  }
+  .step {
+    white-space: nowrap;
+    padding: 5px 8px;
+  }
+  .top-actions {
+    margin-left: auto;
+  }
+  .top-actions .tier-pill {
+    display: none;
+  }
+}

@@ -7,6 +7,7 @@ import { DOMAINS } from '../library/threatRules';
 import { computeGaps, completeness, crossedBoundaries, membership, missingFlowLabels } from '../logic/analysis';
 import { autonomyReach, rating } from '../logic/risk';
 import { narrative } from '../logic/threats';
+import { findAttackPaths, SINK_LABEL } from '../logic/paths';
 import { classify, overallPosture, weakAnswers } from '../logic/posture';
 import { CLASS_LABEL, dataExposures, EXPOSURE_LABEL, propagate } from '../logic/dataflow';
 import { definitionOfDone, threatEvidence, verification, VERIFICATION_LABEL } from '../logic/controls';
@@ -384,6 +385,29 @@ export function buildReport(a: Assessment, opts: ReportOptions = defaultReportOp
       });
     }
     if (!confirmed.length) b.push({ t: 'p', text: 'No threats have been confirmed yet.', style: 'callout' });
+    const paths = findAttackPaths(a);
+    if (paths.length) {
+      b.push({ t: 'h2', text: 'Attack paths' });
+      b.push({
+        t: 'p',
+        text: 'Multi-step chains found in the architecture: attacker-reachable input, through a component where AI interprets content, to a high-impact sink, across at least one trust boundary.',
+        style: 'muted',
+      });
+      b.push({
+        t: 'table',
+        head: ['Severity', 'Impact', 'Path', 'Boundaries crossed', 'Controls on path', 'Scenario'],
+        rows: paths.map((p) => [
+          { text: m.ratingLabels[p.severity - 1], fill: RATING_FILL[p.severity - 1], color: RATING_TEXT[p.severity - 1], bold: true },
+          SINK_LABEL[p.category],
+          p.steps.map((id) => byId.get(id)?.name ?? '?').join(' → '),
+          p.boundaries.map((id) => a.boundaries.find((x) => x.id === id)?.name).join(', '),
+          [p.gated && 'Approval gate', p.guarded && 'Guardrail'].filter(Boolean).join(', ') || 'None',
+          a.threats.find((t) => t.signature === `PATH:${p.key}` && t.status !== 'dismissed')?.ref ?? { text: 'Not assessed', color: '#a65f00' },
+        ]),
+        widths: [1, 1.4, 5, 2.2, 1.4, 1.1],
+        small: true,
+      });
+    }
     if (opts.includeDismissed && dismissed.length) {
       b.push({ t: 'h2', text: 'Dismissed scenarios' });
       b.push({ t: 'table', head: ['ID', 'Threat', 'Reason for dismissal'], rows: dismissed.map((t) => [t.ref, t.title, dash(t.dismissReason)]), widths: [1, 4, 5] });

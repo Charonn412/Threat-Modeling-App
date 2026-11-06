@@ -148,6 +148,68 @@ export function generateCandidates(a: Assessment, rules: ThreatRule[] = THREAT_R
       }
     }
   }
+  return dedupe(out, a);
+}
+
+/**
+ * Merges near-duplicate candidates:
+ *  - component rules firing on components joined by a flow (e.g. a tool and the API it calls)
+ *  - flow rules firing on several flows into the same target (one scenario per target)
+ */
+function dedupe(cands: Candidate[], a: Assessment): Candidate[] {
+  const out: Candidate[] = [];
+  const name = (id: string) => a.components.find((c) => c.id === id)?.name ?? '?';
+  const byRule = new Map<string, Candidate[]>();
+  for (const c of cands) byRule.set(c.rule.id, [...(byRule.get(c.rule.id) ?? []), c]);
+  for (const group of byRule.values()) {
+    const rule = group[0].rule;
+    if (group.length === 1 || rule.scope === 'system') {
+      out.push(...group);
+      continue;
+    }
+    if (rule.scope === 'flow') {
+      const byTarget = new Map<string, Candidate[]>();
+      for (const c of group) byTarget.set(c.componentIds[1], [...(byTarget.get(c.componentIds[1]) ?? []), c]);
+      for (const [target, cs] of byTarget) {
+        if (cs.length === 1) {
+          out.push(cs[0]);
+          continue;
+        }
+        const sources = cs.map((c) => c.componentIds[0]);
+        out.push({
+          signature: `${rule.id}:${cs.map((c) => c.flowIds[0]).sort().join('+')}`,
+          rule,
+          componentIds: [...new Set([...sources, target])],
+          flowIds: cs.map((c) => c.flowIds[0]),
+          vars: { ...cs[0].vars, src: sources.map(name).join(', '), dst: name(target) },
+        });
+      }
+      continue;
+    }
+    // Component scope: union-find over subjects connected by a direct flow.
+    const ids = group.map((c) => c.componentIds[0]);
+    const parent = new Map(ids.map((id) => [id, id]));
+    const find = (x: string): string => (parent.get(x) === x ? x : find(parent.get(x)!));
+    const set = new Set(ids);
+    for (const f of a.flows) if (set.has(f.source) && set.has(f.target)) parent.set(find(f.target), find(f.source));
+    const clusters = new Map<string, string[]>();
+    for (const id of ids) clusters.set(find(id), [...(clusters.get(find(id)) ?? []), id]);
+    for (const members of clusters.values()) {
+      if (members.length === 1) {
+        out.push(group.find((c) => c.componentIds[0] === members[0])!);
+        continue;
+      }
+      // Order upstream-first so the name reads in flow direction.
+      const ordered = [...members].sort((x, y) => Number(a.flows.some((f) => f.source === y && f.target === x)) - Number(a.flows.some((f) => f.source === x && f.target === y)));
+      out.push({
+        signature: `${rule.id}:${[...members].sort().join('+')}`,
+        rule,
+        componentIds: ordered,
+        flowIds: [],
+        vars: { ...group[0].vars, name: ordered.map(name).join(' → ') },
+      });
+    }
+  }
   return out;
 }
 
@@ -337,7 +399,7 @@ export function refreshThreats(a: Assessment, rules: ThreatRule[] = THREAT_RULES
 
   for (const t of a.threats) {
     const cand = t.signature ? bySig.get(t.signature) : undefined;
-    if (t.signature && !cand) {
+    if (t.ruleId && t.signature && !cand) {
       if (t.status === 'candidate' && !t.edited) {
         removed += 1;
         continue;

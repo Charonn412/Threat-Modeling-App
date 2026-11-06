@@ -1647,3 +1647,10 @@ code {
 .tag.secure { border-color: var(--ok); color: var(--ok); }
 .question.finding-weak { background: color-mix(in srgb, var(--danger) 6%, transparent); }
 .danger-text { color: var(--danger); }
+.view-toggle { width: 100%; }
+.view-toggle .seg-btn { flex: 1; padding: 6px 8px; }
+.seg-btn.on.view { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.path-steps { padding-left: 22px; }
+.path-steps li { margin: 6px 0; }
+.path-steps li.pivot { font-weight: 600; }
+.path-steps li.sink { color: var(--danger); font-weight: 600; }

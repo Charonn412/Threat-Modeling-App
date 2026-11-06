@@ -21,6 +21,7 @@ import type { DiagramSuggestion } from '../library/questions';
 import { migrate } from '../io/file';
 import { emptyThreat, nextThreatRef, refreshThreats, type RefreshResult } from '../logic/threats';
 import { emptyControl, generateControls } from '../logic/controls';
+import { threatFromPath, type AttackPath } from '../logic/paths';
 import { catalogVersions } from '../library/frameworks';
 
 export type Step = 'start' | 'intake' | 'architecture' | 'gaps' | 'objectives' | 'threats' | 'risk' | 'report' | 'settings' | 'libraries' | 'validation';
@@ -69,6 +70,7 @@ interface State {
   refreshThreats(): RefreshResult | null;
   updateThreat(id: string, patch: Partial<Threat>): void;
   addCustomThreat(): string;
+  addThreatFromPath(p: AttackPath): string;
   removeThreat(id: string): void;
   selectedThreat: string | null;
   selectThreat(id: string | null): void;
@@ -214,6 +216,18 @@ export const useStore = create<State>()(
               };
             }),
           })),
+        addThreatFromPath: (p) => {
+          const a = get().assessment!;
+          const existing = a.threats.find((t) => t.signature === `PATH:${p.key}`);
+          if (existing) {
+            set({ selectedThreat: existing.id });
+            return existing.id;
+          }
+          const t = threatFromPath(a, p, nextThreatRef(a));
+          mutate((x) => ({ ...x, threats: [...x.threats, t] }));
+          set({ selectedThreat: t.id });
+          return t.id;
+        },
         addCustomThreat: () => {
           const a = get().assessment!;
           const t = { ...emptyThreat(nextThreatRef(a)), title: 'New threat scenario', edited: true };

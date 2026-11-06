@@ -6,6 +6,7 @@ import { questionsFor } from '../logic/analysis';
 import { questionsForAreas } from '../library/questions';
 import { useStore } from '../state/store';
 import { useTier } from './hooks';
+import { classify } from '../logic/posture';
 
 const STATUSES: { value: AnswerStatus; label: string }[] = [
   { value: 'yes', label: 'Yes' },
@@ -80,11 +81,19 @@ function QuestionItem({ component, q }: { component: Component; q: Question }) {
   const showSuggestion = suggestion && answer?.status === 'yes' && !alreadyConnected;
   const expanded = open || answer?.status === 'unknown';
 
+  const finding = classify(q, answer);
   return (
-    <div className={`question status-${answer?.status ?? 'none'}`}>
+    <div className={`question status-${answer?.status ?? 'none'} finding-${finding}`}>
       <div className="q-text">
         <span className="q-id">{q.id}</span> {q.text}
         <span className={`tag ${q.kind}`}>{q.kind === 'ai' ? 'AI' : 'Traditional'}</span>
+        {finding === 'weak' && (
+          <span className="tag weak" title={`The secure answer is ${q.secure === 'no' ? 'No' : 'Yes'}. This answer is a security finding.`}>
+            Weak
+          </span>
+        )}
+        {finding === 'secure' && <span className="tag secure">Secure</span>}
+        {q.secure === 'info' && <span className="tag" title="Describes a capability, not security posture">Info</span>}
       </div>
       <div className="row between">
         <div className="seg" role="radiogroup" aria-label={`Answer ${q.id}`}>

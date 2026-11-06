@@ -1641,3 +1641,9 @@ code {
     display: none;
   }
 }
+
+/* ── Posture ─────────────────────────────────────────── */
+.tag.weak { border-color: var(--danger); color: #fff; background: var(--danger); }
+.tag.secure { border-color: var(--ok); color: var(--ok); }
+.question.finding-weak { background: color-mix(in srgb, var(--danger) 6%, transparent); }
+.danger-text { color: var(--danger); }

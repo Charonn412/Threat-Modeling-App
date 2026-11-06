@@ -3,6 +3,28 @@ import { answerKey, type Assessment, type Component, type Flow, type Level, type
 import { uid } from '../model/factory';
 import { crossedBoundaries, membership } from './analysis';
 import { autonomyReach, clampLevel } from './risk';
+import { classify } from './posture';
+import { questionsForAreas } from '../library/questions';
+import { getComponentType } from '../library/catalog';
+import type { AreaId } from '../model/types';
+
+/** Appendix B areas whose weak answers make a threat domain more likely. */
+const DOMAIN_AREAS: Record<string, AreaId[]> = {
+  'prompt-injection': ['B1', 'B4', 'B5', 'B17'],
+  'data-disclosure': ['B1', 'B3', 'B4', 'B5', 'B11', 'B15'],
+  'excessive-agency': ['B7', 'B8', 'B10', 'B16'],
+  identity: ['B1', 'B2', 'B8', 'B10', 'B13'],
+  'rag-poisoning': ['B5', 'B11'],
+  'memory-poisoning': ['B6'],
+  'multi-agent': ['B7'],
+  'output-handling': ['B1', 'B2', 'B9', 'B10'],
+  'model-integrity': ['B3', 'B12', 'B13'],
+  availability: ['B1', 'B3', 'B7', 'B14'],
+  'tenant-isolation': ['B5', 'B11', 'B13'],
+  'human-workflow': ['B16'],
+  monitoring: ['B15'],
+  traditional: ['B1', 'B2', 'B10', 'B11', 'B13', 'B14', 'B17'],
+};
 
 interface Ctx {
   a: Assessment;
@@ -144,6 +166,23 @@ export function suggestRating(a: Assessment, rule: ThreatRule, componentIds: str
       signals.push(sig.note);
       bump += sig.bump ?? 1;
     }
+  }
+  // Other weak answers on the involved components, in Appendix B areas relevant to this threat domain.
+  const ruleQs = new Set((rule.signals ?? []).map((x) => x.q));
+  const areas = DOMAIN_AREAS[rule.domain] ?? [];
+  const related = new Map<string, string>();
+  for (const id of componentIds) {
+    const c = a.components.find((x) => x.id === id);
+    if (!c) continue;
+    for (const q of questionsForAreas(getComponentType(c.type).areas)) {
+      if (ruleQs.has(q.id) || !areas.includes(q.area)) continue;
+      if (classify(q, a.answers[answerKey(id, q.id)]) === 'weak') related.set(q.id, q.text);
+    }
+  }
+  if (related.size) {
+    bump += 1;
+    for (const [qid, text] of [...related].slice(0, 4)) signals.push(`${qid}: weak answer (${text.length > 70 ? `${text.slice(0, 69)}…` : text})`);
+    if (related.size > 4) signals.push(`…and ${related.size - 4} more weak answers`);
   }
   if (bump) {
     l += Math.min(bump, 2);

@@ -4,6 +4,7 @@ import { TIER_LABEL } from '../model/types';
 import { useStore } from '../state/store';
 import { Progress } from './controls';
 import { useTier } from './hooks';
+import { overallPosture, weakAnswers } from '../logic/posture';
 
 const SECTIONS: { kind: Gap['kind']; title: string; help: string }[] = [
   { kind: 'unknown', title: 'Unknowns (tracked gaps)', help: '"Unknown" is a tracked gap, not an implicit pass. Each one needs an owner and a resolution date (Part II).' },
@@ -35,6 +36,7 @@ export function GapsPage() {
         {TIER_LABEL[tier]} tier · {c.percent}% complete. Select an item to jump to it in the architecture.
       </p>
       <Progress value={c.percent} />
+      <WeakAnswers />
       {SECTIONS.map((sec) => {
         const items = gaps.filter((g) => g.kind === sec.kind);
         const collapsible = sec.kind === 'unanswered';
@@ -87,5 +89,59 @@ export function GapsPage() {
         );
       })}
     </div>
+  );
+}
+
+function WeakAnswers() {
+  const a = useStore((s) => s.assessment)!;
+  const select = useStore((s) => s.select);
+  const setStep = useStore((s) => s.setStep);
+  const weak = weakAnswers(a);
+  const p = overallPosture(a);
+  return (
+    <section className="card">
+      <h2>
+        Weak answers (security findings) <span className="count">{weak.length}</span>
+      </h2>
+      <p className="small muted">
+        Answers that indicate a weakness: the secure answer is the opposite. They raise the suggested likelihood of related threats.
+        {p.score !== null && ` Overall posture: ${p.score}% secure (${p.secure} secure, ${p.weak} weak, ${p.gap} unknown).`}
+      </p>
+      {weak.length === 0 ? (
+        <p className="small ok">None recorded.</p>
+      ) : (
+        <table className="table">
+          <thead>
+            <tr>
+              <th>Component</th>
+              <th>Finding</th>
+              <th>Note</th>
+            </tr>
+          </thead>
+          <tbody>
+            {weak.map((w) => (
+              <tr key={`${w.component.id}-${w.question.id}`}>
+                <td>
+                  <button
+                    type="button"
+                    className="link"
+                    onClick={() => {
+                      select({ kind: 'component', id: w.component.id });
+                      setStep('architecture');
+                    }}
+                  >
+                    {w.component.name}
+                  </button>
+                </td>
+                <td>
+                  <span className="q-id">{w.question.id}</span> {w.question.text} <strong className="danger-text">{w.answer.status === 'yes' ? 'Yes' : 'No'}</strong>
+                </td>
+                <td className="small">{w.answer.note || '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </section>
   );
 }

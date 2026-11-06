@@ -7,6 +7,7 @@ import { DATA_CLASS_OPTIONS, Field, Progress, Select, TextArea, TextInput } from
 import { QuestionList } from './QuestionList';
 import { BOUNDARY_KIND_OPTIONS, CONTENT_ORIGIN_OPTIONS, PLANE_OPTIONS, TRUST_OPTIONS, YNU_OPTIONS } from './labels';
 import { useTier } from './hooks';
+import { componentPosture, overallPosture, type Posture } from '../logic/posture';
 
 export function Inspector() {
   const selection = useStore((s) => s.selection);
@@ -37,6 +38,7 @@ function Summary() {
         Assurance tier: <strong>{TIER_LABEL[tier]}</strong>
       </p>
       <Progress value={c.percent} />
+      <PostureLine p={overallPosture(a)} label="Overall security posture" />
       <p className="small">
         {c.percent}% complete · {c.questionsAnswered}/{c.questionsTotal} questions answered · {c.unknowns} unknown · {c.flowsLabeled}/{c.flowsTotal} flows fully
         labeled · {c.crossingFlows} boundary-crossing flows
@@ -107,6 +109,7 @@ function ComponentInspector({ c }: { c: Component }) {
         <TextArea value={c.notes} onChange={(v) => set({ notes: v })} rows={2} />
       </Field>
       <h3 className="mt">Appendix B questions</h3>
+      <PostureLine p={componentPosture(useStore.getState().assessment!, c)} label="Posture" />
       <QuestionList component={c} />
     </div>
   );
@@ -210,5 +213,15 @@ function BoundaryInspector({ b }: { b: TrustBoundary }) {
         ))}
       </ul>
     </div>
+  );
+}
+
+function PostureLine({ p, label }: { p: Posture; label: string }) {
+  if (p.score === null) return <p className="small muted">{label}: not yet scored. Answer the questions to compute it.</p>;
+  const cls = p.score >= 80 ? 'ok' : p.score >= 50 ? 'warn' : 'danger-text';
+  return (
+    <p className="small">
+      {label}: <strong className={cls}>{p.score}%</strong> secure · {p.weak} weak · {p.gap} unknown
+    </p>
   );
 }

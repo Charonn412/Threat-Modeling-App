@@ -20,12 +20,20 @@ export interface DiagramSuggestion {
   prompt: string;
 }
 
+/**
+ * Which answer indicates a secure design. 'yes' (default): Yes is good.
+ * 'no': the question asks about a weakness, so Yes is a finding.
+ * 'info': describes a capability (e.g. "does the agent persist memory?"), not posture.
+ */
+export type SecureAnswer = 'yes' | 'no' | 'info';
+
 export interface Question {
   id: string;
   area: AreaId;
   tier: Tier;
   kind: QuestionKind;
   text: string;
+  secure?: SecureAnswer;
   suggest?: DiagramSuggestion;
 }
 
@@ -135,7 +143,7 @@ const RAW: Record<AreaId, Omit<Question, 'area'>[]> = {
   B8: [
     q('B8.1', 1, 'ai', 'Are the exact operations exposed by this tool listed, with read and write actions separated?'),
     q('B8.2', 1, 'traditional', 'What identity does the tool use (delegated user, workload identity, shared service account, vendor token), and is it least-privilege?'),
-    q('B8.3', 1, 'ai', 'Can tool arguments be influenced by prompt injection, and are arguments validated against strict schemas and destination allowlists?'),
+    q('B8.3', 1, 'ai', 'Can tool arguments be set by prompt-injected or model-generated values without strict schema and destination-allowlist validation?'),
     q('B8.4', 2, 'ai', 'Are high-impact actions gated by independent policy and human approval, with limits enforced?', { addType: 'approval_gate', direction: 'in', flowLabel: 'approved action', prompt: 'Add an approval gate in front of this tool?' }),
     q('B8.5', 2, 'traditional', 'Is authorization enforced inside the tool service rather than trusted from the caller?'),
     q('B8.6', 2, 'traditional', 'Are tool calls logged with caller, agent, arguments, result, timestamp and correlation ID?', { addType: 'monitoring', direction: 'out', flowLabel: 'tool-call audit events', prompt: 'Add logging & monitoring for tool calls?' }),
@@ -215,8 +223,13 @@ const RAW: Record<AreaId, Omit<Question, 'area'>[]> = {
   ],
 };
 
+/** Questions where "Yes" describes a weakness. */
+const SECURE_NO = new Set(["B3.4", "B4.2", "B4.4", "B5.3", "B5.4", "B6.3", "B7.5", "B7.6", "B8.3", "B10.4", "B11.4", "B13.4", "B17.3"]);
+/** Questions that describe capabilities rather than security posture. */
+const INFO_ONLY = new Set(["B7.2", "B7.3", "B9.1", "B12.1"]);
+
 export const BUILTIN_QUESTIONS: Question[] = (Object.keys(RAW) as AreaId[]).flatMap((area) =>
-  RAW[area].map((qq) => ({ ...qq, area })),
+  RAW[area].map((qq) => ({ ...qq, area, secure: SECURE_NO.has(qq.id) ? ('no' as const) : INFO_ONLY.has(qq.id) ? ('info' as const) : ('yes' as const) })),
 );
 
 // Live binding: replaced when library edits are applied (see registry.ts).

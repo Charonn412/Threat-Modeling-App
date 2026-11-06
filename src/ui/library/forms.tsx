@@ -145,6 +145,13 @@ export function QuestionForm({ item, isNew, onSaved, onCancelNew }: FormProps<Qu
           </select>
         </Field>
       </div>
+      <Field label="Secure answer" hint="Drives the posture score: an answer opposite to the secure one is a security finding.">
+        <select className="input" value={draft.secure ?? 'yes'} onChange={(e) => set({ secure: e.target.value as Question['secure'] })}>
+          <option value="yes">Yes is secure (e.g. "Is authorization enforced?")</option>
+          <option value="no">No is secure (e.g. "Can users influence instructions?")</option>
+          <option value="info">Informational: describes a capability, not posture</option>
+        </select>
+      </Field>
       <Field label="Question">
         <TextArea value={draft.text} onChange={(v) => set({ text: v })} rows={3} />
       </Field>

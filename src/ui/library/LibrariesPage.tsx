@@ -136,7 +136,7 @@ export function LibrariesPage() {
               newLabel="New question"
               label={(q) => q.text}
               sub={(q) => `${q.area} ${getArea(q.area)?.title ?? ''} · ${['', 'Light', 'Standard', 'Deep'][q.tier]} · ${q.kind === 'ai' ? 'AI' : 'Traditional'}`}
-              blank={() => ({ id: '', area: 'B1', tier: 2, kind: 'traditional', text: '' })}
+              blank={() => ({ id: '', area: 'B1', tier: 2, kind: 'traditional', text: '', secure: 'yes' })}
               Form={QuestionForm}
             />
           )}

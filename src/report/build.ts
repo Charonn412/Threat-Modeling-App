@@ -7,6 +7,7 @@ import { DOMAINS } from '../library/threatRules';
 import { computeGaps, completeness, crossedBoundaries, membership, missingFlowLabels } from '../logic/analysis';
 import { autonomyReach, rating } from '../logic/risk';
 import { narrative } from '../logic/threats';
+import { classify, overallPosture } from '../logic/posture';
 import { definitionOfDone, threatEvidence, verification, VERIFICATION_LABEL } from '../logic/controls';
 import { computeTier } from '../logic/tier';
 import {
@@ -57,7 +58,8 @@ export const defaultReportOptions = (): ReportOptions => ({
 });
 
 const STATUS_LABEL = { yes: 'Yes', no: 'No', na: 'N/A', unknown: 'Unknown' } as const;
-const STATUS_FILL: Record<string, string> = { yes: '#d3f9d8', no: '#ffe8cc', na: '#e9ecef', unknown: '#ffe3e3' };
+/** Answer cells are colored by what they mean for security, not by Yes/No. */
+const FINDING_FILL: Record<string, string> = { secure: '#d3f9d8', weak: '#ffc9c9', gap: '#fff3bf', na: '#e9ecef', info: '#e7f5ff' };
 const DOMAIN_NAME = new Map(DOMAINS.map((d) => [d.id, d.name]));
 const ORIGIN = new Map(CONTENT_ORIGIN_OPTIONS.map((o) => [o.value, o.label]));
 const TRUST = new Map(TRUST_OPTIONS.map((o) => [o.value, o.label]));
@@ -127,6 +129,7 @@ export function buildReport(a: Assessment, opts: ReportOptions = defaultReportOp
   const members = membership(a);
   const gaps = computeGaps(a, tier.tier);
   const comp = completeness(a, tier.tier);
+  const posture = overallPosture(a);
   const generated = (opts.generatedAt ?? new Date()).toISOString().slice(0, 10);
   const decision = a.signOff.decision ? DECISION_LABEL[a.signOff.decision] : 'Not yet decided';
   let n = 0;
@@ -165,7 +168,8 @@ export function buildReport(a: Assessment, opts: ReportOptions = defaultReportOp
         `(${comp.crossingFlows} ${plural(comp.crossingFlows, 'flow crosses', 'flows cross')} a boundary). ${confirmed.length} threat ${plural(confirmed.length, 'scenario was', 'scenarios were')} confirmed` +
         (dismissed.length ? `, ${dismissed.length} ${plural(dismissed.length, 'was', 'were')} dismissed with rationale` : '') +
         (candidates.length ? `, and ${candidates.length} ${plural(candidates.length, 'candidate is', 'candidates are')} still awaiting review` : '') +
-        `. Current decision: ${decision}.`,
+        `. Current decision: ${decision}.` +
+        (posture.score !== null ? ` Architecture posture from Appendix B answers: ${posture.score}% secure (${posture.weak} weak ${plural(posture.weak, 'answer', 'answers')}, ${posture.gap} unknown).` : ''),
     });
     b.push({
       t: 'table',
@@ -187,6 +191,7 @@ export function buildReport(a: Assessment, opts: ReportOptions = defaultReportOp
       });
     }
     const keyItems: string[] = [];
+    if (posture.weak) keyItems.push(`${posture.weak} Appendix B ${plural(posture.weak, 'answer indicates', 'answers indicate')} a security weakness (see the discovery record).`);
     if (unknowns) keyItems.push(`${unknowns} architecture ${plural(unknowns, 'question is', 'questions are')} marked Unknown (tracked gaps).`);
     if (candidates.length) keyItems.push(`${candidates.length} generated threat ${plural(candidates.length, 'candidate has', 'candidates have')} not been reviewed.`);
     const untreated = confirmed.filter((t) => !t.treatment).length;
@@ -304,7 +309,7 @@ export function buildReport(a: Assessment, opts: ReportOptions = defaultReportOp
         rows.push([
           q.id,
           qById.get(q.id)!.text,
-          ans ? { text: STATUS_LABEL[ans.status], fill: STATUS_FILL[ans.status], bold: true } : { text: 'Unanswered', color: '#868e96' },
+          ans ? { text: `${STATUS_LABEL[ans.status]}${classify(q, ans) === 'weak' ? ' (weak)' : ''}`, fill: FINDING_FILL[classify(q, ans)], bold: true } : { text: 'Unanswered', color: '#868e96' },
           dash([ans?.note, ans?.evidence ? `Evidence: ${ans.evidence}` : ''].filter(Boolean).join(' · ')),
           dash([ans?.owner, ans?.dueDate].filter(Boolean).join(' · ')),
         ]);

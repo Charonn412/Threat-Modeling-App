@@ -60,7 +60,7 @@ export function ThreatsPage() {
   };
 
   return (
-    <div className="threats">
+    <div className={`threats ${selected ? 'has-selection' : ''}`}>
       <aside className="threat-list">
         <div className="tl-head">
           <div className="row between">
@@ -192,6 +192,9 @@ function ThreatEditor({ t }: { t: Threat }) {
 
   return (
     <div className="pad-l editor">
+      <button type="button" className="btn small mobile-back" onClick={() => useStore.getState().selectThreat(null)}>
+        ← All threats
+      </button>
       <div className="row between wrap">
         <div>
           <span className="q-id">

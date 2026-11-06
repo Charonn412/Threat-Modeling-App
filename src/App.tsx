@@ -13,6 +13,7 @@ import { SettingsPage } from './ui/SettingsPage';
 import { ReportPage } from './ui/ReportPage';
 import { ValidationPage } from './ui/ValidationPage';
 import { LibrariesPage } from './ui/library/LibrariesPage';
+import { CloudStatus, ConflictBanner, TeamPanel } from './team/ui';
 import { TIER_LABEL } from './model/types';
 import { useTier } from './ui/hooks';
 
@@ -35,6 +36,7 @@ export default function App() {
   const setStep = useStore((s) => s.setStep);
   const load = useStore((s) => s.load);
   const [msg, setMsg] = useState('');
+  const [teamOpen, setTeamOpen] = useState(false);
 
   if (!assessment || step === 'start' || (step === 'libraries' && !assessment)) {
     const libs = step === 'libraries';
@@ -94,6 +96,7 @@ export default function App() {
         </nav>
         <div className="top-actions">
           {msg && <span className="small flash">{msg}</span>}
+          <CloudStatus onOpenPanel={() => setTeamOpen(true)} />
           <TierPill />
           <button type="button" className="btn small" onClick={save}>
             Save file
@@ -106,6 +109,8 @@ export default function App() {
           </button>
         </div>
       </TopBar>
+      <ConflictBanner />
+      {teamOpen && <TeamPanel onClose={() => setTeamOpen(false)} />}
       <main className={`main ${step === 'architecture' || step === 'threats' || step === 'validation' || step === 'report' || step === 'libraries' ? '' : 'scroll'}`}>
         {step === 'intake' && <IntakePage />}
         {step === 'architecture' && <ArchitecturePage />}

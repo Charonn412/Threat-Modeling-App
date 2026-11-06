@@ -1667,3 +1667,22 @@ code {
 .badge.cov-in-progress { border-color: var(--warn); color: var(--warn); }
 .badge.cov-gap { border-color: var(--danger); color: var(--danger); }
 .input.narrow { width: auto; }
+
+/* ── Team workspace ──────────────────────────────────── */
+.cloud-pill { border: 1px solid var(--border); background: var(--panel); color: var(--text); border-radius: 99px; padding: 3px 10px; font: inherit; font-size: 12px; cursor: pointer; white-space: nowrap; }
+.cloud-pill.st-saved { border-color: var(--ok); color: var(--ok); }
+.cloud-pill.st-dirty, .cloud-pill.st-saving { border-color: var(--accent); color: var(--accent); }
+.cloud-pill.st-conflict, .cloud-pill.st-error { border-color: var(--danger); color: #fff; background: var(--danger); }
+.banner { padding: 8px 14px; background: var(--accent-soft); border-bottom: 1px solid var(--border); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.warn-banner { background: color-mix(in srgb, var(--danger) 12%, var(--panel)); }
+.drawer-backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.35); z-index: 200; display: flex; justify-content: flex-end; }
+.drawer { width: min(460px, 100%); height: 100%; background: var(--panel); border-left: 1px solid var(--border); padding: 12px 14px 40px; overflow: auto; display: flex; flex-direction: column; gap: 10px; }
+.team-tab { display: flex; flex-direction: column; gap: 10px; }
+.comment-list { display: flex; flex-direction: column; gap: 8px; }
+.comment { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; }
+.comment.resolved { opacity: 0.6; }
+.comment-body { white-space: pre-wrap; margin: 4px 0; }
+.version-card { margin: 0; }
+.badge.dec-approve { background: var(--ok); border-color: var(--ok); color: #fff; }
+.badge.dec-approve-with-conditions { border-color: var(--warn); color: var(--warn); }
+.badge.dec-reject { border-color: var(--danger); color: var(--danger); }

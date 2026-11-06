@@ -2,6 +2,7 @@ import { CATALOGS } from '../library/frameworks';
 import { THREAT_RULES } from '../library/threatRules';
 import { defaultRiskMatrix, type Level, type RiskMatrix } from '../model/types';
 import { useStore } from '../state/store';
+import { TeamSettings } from '../team/ui';
 
 export function SettingsPage() {
   const a = useStore((s) => s.assessment)!;
@@ -22,6 +23,8 @@ export function SettingsPage() {
   return (
     <div className="page">
       <h1>Settings</h1>
+
+      <TeamSettings />
 
       <section className="card">
         <div className="row between">

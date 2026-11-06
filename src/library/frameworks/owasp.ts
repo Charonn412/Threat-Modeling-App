@@ -23,7 +23,7 @@ export interface Catalog {
   name: string;
   short: string;
   version: string;
-  kind: 'ai' | 'traditional';
+  kind: 'ai' | 'traditional' | 'compliance';
   source: string;
   items: CatalogItem[];
   /** Official mitigations, where the framework publishes them (MITRE ATLAS). */

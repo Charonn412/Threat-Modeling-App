@@ -1,3 +1,6 @@
+import type { FrameworkRef } from '../model/types';
+import { PATTERN_COMPLIANCE } from './complianceMap';
+
 /**
  * Appendix D secure design pattern catalogue, with the OWASP ASVS 5.0
  * chapters that hold the corresponding verification requirements.
@@ -9,9 +12,11 @@ export interface Pattern {
   asvs: string[];
   /** Suggested validation tests (Section 11); "Negative:" marks tests proving unauthorized behavior is denied. */
   tests?: string[];
+  /** Compliance controls/requirements this pattern helps satisfy (see complianceMap.ts). */
+  compliance?: FrameworkRef[];
 }
 
-export const BUILTIN_PATTERNS: Pattern[] = [
+const PATTERNS_BASE: Pattern[] = [
   { id: 'policy-outside-model', name: 'Policy enforcement outside the model', outcome: 'A deterministic policy service decides whether an action is allowed using authenticated identity, resource, action, context and risk. The model may recommend but cannot grant authority.', asvs: ['V8 Authorization'], tests: ["Negative: instruct the model (directly and via injected content) to perform an action the user is not entitled to; expect the policy service to deny it and log the decision.", "Positive: an entitled action succeeds and the policy decision is logged with identity, resource and action."] },
   { id: 'capability-tools', name: 'Capability-based tool access', outcome: 'Expose narrow task-specific tools; separate read/write; scope credentials and resources; allowlist operations and destinations; avoid general-purpose admin tools.', asvs: ['V8 Authorization', 'V4 API and Web Service'], tests: ["Negative: call each tool with an out-of-scope operation, resource and destination; expect rejection by the tool service.", "Review: export tool credentials/IAM and confirm read and write scopes are separate and least-privilege."] },
   { id: 'approval-bound', name: 'Human approval bound to payload', outcome: 'Approval is bound to the exact action, target, parameters, amount and expiry. Any material change invalidates approval. Approval is recorded and independently enforced.', asvs: ['V2 Validation and Business Logic'], tests: ["Negative: change the action payload after approval; expect execution to be blocked.", "Negative: replay a used or expired approval; expect rejection.", "Negative: make the approver unavailable; expect the action to fail closed."] },
@@ -33,6 +38,8 @@ export const BUILTIN_PATTERNS: Pattern[] = [
   { id: 'audit-monitoring', name: 'Tamper-resistant logging and monitoring', outcome: 'End-to-end correlated telemetry, protected logs, behavioral alerting, AI-specific playbooks, kill switch and credential revocation.', asvs: ['V16 Security Logging and Error Handling'], tests: ["Run an injection or tool-misuse scenario; expect a correlated alert within the threshold.", "Negative: modify or delete logs using the runtime identity; expect denial."] },
   { id: 'input-validation', name: 'Input validation and output encoding', outcome: 'Validate type, length, encoding and schema on every input; encode outputs for their context; parameterize queries.', asvs: ['V1 Encoding and Sanitization', 'V2 Validation and Business Logic', 'V5 File Handling'], tests: ["Negative: fuzz with injection, oversized, malformed and wrongly-encoded input; expect rejection without leaking internals."] },
 ];
+
+export const BUILTIN_PATTERNS: Pattern[] = PATTERNS_BASE.map((p) => ({ ...p, compliance: PATTERN_COMPLIANCE[p.id] ?? [] }));
 
 // Live binding: replaced when library edits are applied (see registry.ts).
 export let PATTERNS: Pattern[] = BUILTIN_PATTERNS;

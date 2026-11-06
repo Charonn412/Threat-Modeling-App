@@ -58,9 +58,10 @@ describe('report builder', () => {
       '7. Risk register and treatment',
       '8. Control and evidence tracker',
       '9. Framework coverage',
-      '10. Open items, assumptions and gaps',
-      '11. Definition of done',
-      '12. Approval and sign-off',
+      '10. Compliance mapping',
+      '11. Open items, assumptions and gaps',
+      '12. Definition of done',
+      '13. Approval and sign-off',
     ]);
     expect(blocks.some((b) => b.t === 'diagram')).toBe(true);
   });

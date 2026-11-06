@@ -1,5 +1,6 @@
 import atlasData from './atlas.json';
 import attackData from './attack.json';
+import { COMPLIANCE_CATALOGS } from './compliance';
 import { OWASP_CATALOGS, STRIDE_CATALOG, type Catalog, type CatalogItem, type Mitigation } from './owasp';
 
 export type { Catalog, CatalogItem, Mitigation } from './owasp';
@@ -37,6 +38,7 @@ export const BUILTIN_CATALOGS: Catalog[] = [
   STRIDE_CATALOG,
   ATTACK,
   ...OWASP_CATALOGS.slice(3), // Top 10, API, NHI, CI/CD, K8s
+  ...COMPLIANCE_CATALOGS,
 ];
 
 // Live binding: replaced when library edits are applied (see registry.ts).

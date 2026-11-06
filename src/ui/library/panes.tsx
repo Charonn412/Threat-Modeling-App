@@ -231,7 +231,7 @@ export function FrameworksPane() {
                 </td>
                 <td>{c.version}</td>
                 <td>{c.items.length}</td>
-                <td className="small">{c.kind === 'ai' ? 'AI' : 'Traditional'}</td>
+                <td className="small">{c.kind === 'ai' ? 'AI' : c.kind === 'compliance' ? 'Compliance' : 'Traditional'}</td>
                 <td>
                   <div className="row gap">
                   {!mitre && (
@@ -320,6 +320,7 @@ function CatalogEditor({ catalog, isNew, onClose }: { catalog: Catalog; isNew: b
           <select className="input" value={draft.kind} onChange={(e) => set({ kind: e.target.value as Catalog['kind'] })}>
             <option value="ai">AI</option>
             <option value="traditional">Traditional</option>
+            <option value="compliance">Compliance</option>
           </select>
         </Field>
         <Field label="Source URL">

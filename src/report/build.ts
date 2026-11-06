@@ -1,5 +1,5 @@
 import { getComponentType } from '../library/catalog';
-import { CATALOGS, getCatalog, lookup } from '../library/frameworks';
+import { CATALOGS, atlasMitigationsFor, getCatalog, lookup } from '../library/frameworks';
 import { INTAKE_SECTIONS } from '../library/intake';
 import { getPattern } from '../library/patterns';
 import { QUESTIONS, questionsForAreas } from '../library/questions';
@@ -398,6 +398,14 @@ export function buildReport(a: Assessment, opts: ReportOptions = defaultReportOp
           ['Attack path', dash(t.attackPath)],
           ['Impact', dash(t.impact)],
           ['Framework mappings', dash(frameworkLine(t))],
+          [
+            'MITRE ATLAS mitigations',
+            dash(
+              atlasMitigationsFor(t.frameworks.filter((f) => f.fw === 'atlas').map((f) => f.id))
+                .map(({ mitigation: m }) => `${m.id} ${m.name}`)
+                .join('; '),
+            ),
+          ],
           ['Existing controls / evidence', dash([t.existingControls, t.evidence && `Evidence: ${t.evidence}`].filter(Boolean).join(' · '))],
           ['Inherent risk', ratingCell(a, t.inherentLikelihood, t.inherentImpact)],
           ['Rating basis', dash([`Likelihood ${levelText(m.likelihoodLabels, t.inherentLikelihood)}, impact ${levelText(m.impactLabels, t.inherentImpact)}.`, t.ratingRationale, ...t.signals].filter(Boolean).join(' '))],

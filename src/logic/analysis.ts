@@ -2,6 +2,28 @@ import { getComponentType } from '../library/catalog';
 import { questionsForAreas, type Question } from '../library/questions';
 import { answerKey, type Assessment, type Component, type Flow, type Tier, type TrustBoundary } from '../model/types';
 
+/**
+ * Component types that answer requests: a flow X → T to one of these also
+ * returns T's data to X (queries, tool calls, model completions). Used by data
+ * propagation and attack-path analysis.
+ */
+export const RESPONDS = new Set([
+  'vector_store',
+  'database',
+  'cache',
+  'memory_store',
+  'object_storage',
+  'rag_retriever',
+  'model_endpoint',
+  'model_gateway',
+  'tool_connector',
+  'mcp_server',
+  'enterprise_api',
+  'browser_automation',
+  'third_party_service',
+  'code_sandbox',
+]);
+
 export const NODE_W = 200;
 export const NODE_H = 64;
 

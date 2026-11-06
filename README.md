@@ -20,6 +20,21 @@ See [`docs/PRODUCT_SPEC.md`](docs/PRODUCT_SPEC.md) for the full design.
   - **Two-way sync:** some answers offer to add related components, e.g. "spawns subagents = Yes" → add a subagent and a delegation flow.
   - **Flow labels:** each flow carries classification, protocol, authentication, authorization context, encryption, content origin, trust level and plane. Flows that cross a trust boundary are highlighted.
   - **Layer toggles:** data plane, control plane, trust boundaries and flow labels.
+- **Analysis upgrades**
+  - **Security posture:** each Appendix B question knows its secure answer. Weak answers become findings and raise the likelihood of related threats.
+  - **Data sensitivity** is tracked along flows, including data returned by queries and tool calls. The app flags sensitive data:
+    - leaving the organization;
+    - crossing a boundary unencrypted;
+    - landing in logs or memory;
+    - exceeding a component's approved classification.
+  - **Attack paths:** multi-step chains from attacker-reachable input, through an AI component, to an action, code execution, exfiltration, persistence or manipulated output, across trust boundaries. Each path can be added as a threat.
+  - **De-duplication:** near-duplicate threats are merged.
+  - **Auto-layout** of the diagram, with undo.
+  - **MITRE ATLAS mitigations** are shown on threats and in the report.
+- **Assessments and versions**
+  - Every assessment is saved separately in the browser and listed on Home.
+  - Named version snapshots can be compared, restored, or used as the report baseline. The comparison shows the Section 13 reassessment triggers that the changes hit.
+- **Exports:** risk register, controls and tests, and a Jira import file (CSV), alongside PDF and Word.
 - **Gaps**
   - Lists Unknowns (each needs an owner and date), boundary-crossing flows with missing labels, isolated components and unanswered questions.
 - **Stage 3 · Objectives (Section 8)**

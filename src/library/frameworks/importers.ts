@@ -1,5 +1,5 @@
 import { load } from 'js-yaml';
-import type { Catalog, CatalogItem } from './owasp';
+import type { Catalog, CatalogItem, Mitigation } from './owasp';
 
 /**
  * Browser-side importers for official MITRE releases, mirroring
@@ -57,7 +57,16 @@ interface AtlasYaml {
   collection?: { version?: string | number };
   tactics?: Record<string, { name: string }>;
   techniques?: Record<string, { name: string; deprecated?: boolean; 'object-type'?: string }>;
-  relationships?: Record<string, { achieves?: { target: string }[] }>;
+  mitigations?: Record<string, { name: string; description?: string; categories?: string[]; deprecated?: boolean; 'object-type'?: string }>;
+  relationships?: Record<string, { achieves?: { target: string }[]; mitigates?: { target: string; description?: string }[] }>;
+}
+
+/** Mirrors first_sentence() in scripts/extract_frameworks.py. */
+function firstSentence(text: unknown, limit = 300): string {
+  const t = String(text ?? '').split(/\s+/).filter(Boolean).join(' ');
+  const cut = t.indexOf('. ');
+  const s = cut > 0 && cut < limit ? t.slice(0, cut + 1) : t.slice(0, limit);
+  return s.length < limit ? s : `${s.slice(0, limit - 1)}…`;
 }
 
 export function parseAtlasYaml(text: string): Catalog {
@@ -86,7 +95,20 @@ export function parseAtlasYaml(text: string): Catalog {
     items.push({ id, name, tactics: tac.map((x) => tactics.get(x)).filter((x): x is string => !!x) });
   }
   if (!items.length) throw new Error('No techniques found.');
+  const mitigations: Mitigation[] = [];
+  for (const id of Object.keys(d.mitigations ?? {}).sort()) {
+    const m = d.mitigations![id];
+    if (m.deprecated || (m['object-type'] ?? 'mitigation') !== 'mitigation') continue;
+    mitigations.push({
+      id,
+      name: m.name,
+      summary: firstSentence(m.description),
+      categories: m.categories ?? [],
+      techniques: (d.relationships?.[id]?.mitigates ?? []).filter((r) => d.techniques![r.target]).map((r) => ({ id: r.target, how: firstSentence(r.description) })),
+    });
+  }
   return {
+    mitigations,
     id: 'atlas',
     name: 'MITRE ATLAS',
     short: 'ATLAS',

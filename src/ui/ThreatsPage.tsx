@@ -4,6 +4,7 @@ import { PATTERNS, getPattern } from '../library/patterns';
 import { narrative, type RefreshResult } from '../logic/threats';
 import { threatEvidence, verification } from '../logic/controls';
 import { findAttackPaths, SINK_LABEL, type AttackPath } from '../logic/paths';
+import { atlasMitigationsFor } from '../library/frameworks';
 import { VerificationBadge } from './ValidationPage';
 import { rating } from '../logic/risk';
 import { OBJECTIVE_LABEL, type ObjectiveId, type Threat, type ThreatStatus, type Treatment } from '../model/types';
@@ -378,6 +379,7 @@ function ThreatEditor({ t }: { t: Threat }) {
 
       <h3 className="mt">Framework mappings</h3>
       <FrameworkTags value={t.frameworks} onChange={(v) => set({ frameworks: v })} />
+      <AtlasMitigations t={t} />
 
       <h3 className="mt">Existing controls & inherent risk (Stage 5)</h3>
       <div className="grid2">
@@ -570,5 +572,30 @@ function PathDetail({ p, onBack, onAdded }: { p: AttackPath; onBack: () => void;
         </button>
       )}
     </div>
+  );
+}
+
+function AtlasMitigations({ t }: { t: Threat }) {
+  const items = atlasMitigationsFor(t.frameworks.filter((f) => f.fw === 'atlas').map((f) => f.id));
+  if (!items.length) return null;
+  return (
+    <details className="sub-card small">
+      <summary>
+        <strong>MITRE ATLAS mitigations</strong> for the mapped techniques ({items.length})
+      </summary>
+      <ul className="plain">
+        {items.map(({ mitigation: m, how }) => (
+          <li key={m.id} className="mitigation">
+            <span className="q-id">{m.id}</span> <strong>{m.name}</strong>
+            {m.categories.length > 0 && <span className="muted"> · {m.categories.join(', ')}</span>}
+            {how.slice(0, 2).map((h) => (
+              <div key={h} className="muted">
+                {h}
+              </div>
+            ))}
+          </li>
+        ))}
+      </ul>
+    </details>
   );
 }

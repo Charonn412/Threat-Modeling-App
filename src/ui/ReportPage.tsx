@@ -8,7 +8,8 @@ import { getVersion, listVersions } from '../state/workspace';
 import { VersionsPanel } from './VersionsPanel';
 import { useStore } from '../state/store';
 import { Field, TextArea, TextInput } from './controls';
-import { downloadBlob, fileBase } from '../io/file';
+import { downloadBlob, downloadText, fileBase } from '../io/file';
+import { controlsCsv, jiraCsv, riskRegisterCsv } from '../io/csv';
 
 export function ReportPage() {
   const a = useStore((s) => s.assessment)!;
@@ -66,6 +67,22 @@ export function ReportPage() {
             🖨 Print
           </button>
           {error && <p className="small warn">{error}</p>}
+          <div className="row gap wrap">
+            <button type="button" className="btn small" onClick={() => downloadText(`${fileBase(a)}-risk-register.csv`, riskRegisterCsv(a), 'text/csv')}>
+              Risk register (CSV)
+            </button>
+            <button type="button" className="btn small" onClick={() => downloadText(`${fileBase(a)}-controls.csv`, controlsCsv(a), 'text/csv')}>
+              Controls & tests (CSV)
+            </button>
+            <button
+              type="button"
+              className="btn small"
+              title="Import in Jira: System → External system import → CSV. One issue per unverified control and per untreated threat."
+              onClick={() => downloadText(`${fileBase(a)}-jira-import.csv`, jiraCsv(a), 'text/csv')}
+            >
+              Jira import (CSV)
+            </button>
+          </div>
           <p className="small muted">Generated in your browser. Nothing is uploaded.</p>
         </div>
 

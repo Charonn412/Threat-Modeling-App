@@ -1659,3 +1659,4 @@ code {
 .badge.diff-removed { border-color: var(--danger); color: var(--danger); }
 .badge.diff-changed { border-color: var(--accent); color: var(--accent); }
 .current-row { background: var(--accent-soft); }
+.mitigation { margin: 8px 0; }

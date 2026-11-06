@@ -1,5 +1,5 @@
 import type { Assessment, Component, DataClass, Flow } from '../model/types';
-import { crossedBoundaries, membership } from './analysis';
+import { crossedBoundaries, membership, RESPONDS } from './analysis';
 
 /**
  * Data-sensitivity propagation (Section 7: label flows with data
@@ -13,7 +13,8 @@ const BY_RANK: DataClass[] = ['', 'public', 'internal', 'confidential', 'restric
 export const CLASS_LABEL: Record<DataClass, string> = { '': 'Unclassified', public: 'Public', internal: 'Internal', confidential: 'Confidential', restricted: 'Restricted' };
 
 const SOURCE_TYPES = new Set(['knowledge_source', 'database', 'object_storage', 'enterprise_api', 'feature_store']);
-const EXTERNAL_KINDS = new Set(['app-provider', 'public-private']);
+/** Boundaries whose far side is outside the organization (model providers). Third parties are detected by component type. */
+const EXTERNAL_KINDS = new Set(['app-provider']);
 const EXTERNAL_TYPES = new Set(['third_party_service', 'browser_automation']);
 const LOG_TYPES = new Set(['monitoring', 'cache', 'memory_store']);
 
@@ -45,6 +46,7 @@ export function propagate(a: Assessment): DataModel {
     else held.set(c.id, { level: '', basis: 'none' });
   }
   const carried = new Map<string, Carried>();
+  const types = new Map(a.components.map((c) => [c.id, c.type]));
   const flowLevel = (f: Flow): Carried => (f.dataClassification ? { level: f.dataClassification, inferred: false } : { level: held.get(f.source)?.level ?? '', inferred: true });
 
   // Monotone fixed point: levels only rise, at most 4 steps per node.
@@ -59,6 +61,13 @@ export function propagate(a: Assessment): DataModel {
       // anything more sensitive it receives. Mismatches are reported by dataExposures().
       if (CLASS_RANK[lv.level] > CLASS_RANK[dst.level]) {
         held.set(f.target, { level: lv.level, basis: 'inherited', from: f.source });
+        changed = true;
+      }
+      // Request/response: querying a store, tool, API or model returns its data to the caller.
+      const tgt = types.get(f.target);
+      const src = held.get(f.source);
+      if (tgt && RESPONDS.has(tgt) && src && CLASS_RANK[dst.level] > CLASS_RANK[src.level]) {
+        held.set(f.source, { level: held.get(f.target)!.level, basis: 'inherited', from: f.target });
         changed = true;
       }
     }
@@ -104,10 +113,13 @@ export function dataExposures(a: Assessment, dm: DataModel = propagate(a)): Expo
     if (!sensitive(lv)) continue;
     const crossed = crossedBoundaries(f, members);
     const dst = byId.get(f.target);
-    const leaves = crossed.some((b) => EXTERNAL_KINDS.has(kinds.get(b) as string)) || (dst && EXTERNAL_TYPES.has(dst.type));
+    // Leaving = the destination is inside an external boundary the source is not in (responses coming back don't count).
+    const dstIn = new Set(members.get(f.target) ?? []);
+    const leaves = crossed.some((b) => EXTERNAL_KINDS.has(kinds.get(b) as string) && dstIn.has(b)) || (!!dst && EXTERNAL_TYPES.has(dst.type));
     if (leaves)
       out.push({ kind: 'leaves-org', level: lv, flowId: f.id, componentId: f.target, detail: `${CLASS_LABEL[lv]} data flows from ${name(f.source)} to ${name(f.target)} across an external boundary.` });
-    if (crossed.length && f.encrypted !== 'yes')
+    // Unrecorded encryption is already a labeling gap; only escalate it when the data leaves the organization.
+    if (crossed.length && (f.encrypted === 'no' || f.encrypted === 'unknown' || (!f.encrypted && leaves)))
       out.push({
         kind: 'unencrypted-crossing',
         level: lv,

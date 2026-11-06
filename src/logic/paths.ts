@@ -1,6 +1,6 @@
 import { lookup } from '../library/frameworks';
 import type { Assessment, FrameworkRef, Threat } from '../model/types';
-import { crossedBoundaries, membership } from './analysis';
+import { crossedBoundaries, membership, RESPONDS } from './analysis';
 import { emptyThreat } from './threats';
 import { propagate, CLASS_LABEL, CLASS_RANK } from './dataflow';
 import type { DataClass } from '../model/types';
@@ -50,23 +50,7 @@ export const SINK_LABEL: Record<SinkCategory, string> = {
   output: 'Manipulated output',
 };
 
-/** Calls to these return data to the caller, so a request flow implies a response edge. */
-const RESPONDS = new Set([
-  'vector_store',
-  'database',
-  'cache',
-  'memory_store',
-  'object_storage',
-  'rag_retriever',
-  'model_endpoint',
-  'model_gateway',
-  'tool_connector',
-  'mcp_server',
-  'enterprise_api',
-  'browser_automation',
-  'third_party_service',
-  'code_sandbox',
-]);
+
 
 export interface AttackPath {
   key: string;

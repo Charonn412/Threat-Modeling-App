@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@dagrejs/dagre": "^2.0.4",
+    "@supabase/supabase-js": "^2.118.0",
     "@xyflow/react": "^12.3.6",
     "docx": "^9.13.0",
     "js-yaml": "^4.1.1",

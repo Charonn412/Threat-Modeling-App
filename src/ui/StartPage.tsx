@@ -5,6 +5,7 @@ import { parse, pickFile } from '../io/file';
 import { useStore } from '../state/store';
 import { DescribePanel } from './DescribePanel';
 import { AssessmentList } from './AssessmentList';
+import { TeamHome } from '../team/ui';
 import { prepareImport } from '../state/workspace';
 
 export function StartPage() {
@@ -85,6 +86,7 @@ export function StartPage() {
       </div>
       {error && <p className="warn">{error}</p>}
 
+      <TeamHome />
       <AssessmentList />
 
       <h2>Starter templates</h2>

@@ -40,6 +40,13 @@ See [`docs/PRODUCT_SPEC.md`](docs/PRODUCT_SPEC.md) for the full design.
     - The NIST catalogs are generated from official NIST data by `scripts/extract_compliance.py`.
     - AI 600-1 categories are transcribed from the NIST PDF.
     - EU AI Act and ISO 42001 titles are transcribed from secondary sources and are editable in Libraries.
+- **Team workspace (optional, Supabase)**
+  - Shared assessments, with conflict-safe saves.
+  - Roles: owner, editor, reviewer and viewer.
+  - Comments on any component, flow, threat or control.
+  - Sign-off bound to an immutable version and its SHA-256.
+  - All access rules are enforced by database row-level security, tested with `supabase/tests/run.sh`.
+  - Setup: [`docs/TEAM_SETUP.md`](docs/TEAM_SETUP.md).
 - **Assessments and versions**
   - Every assessment is saved separately in the browser and listed on Home.
   - Named version snapshots can be compared, restored, or used as the report baseline. The comparison shows the Section 13 reassessment triggers that the changes hit.
